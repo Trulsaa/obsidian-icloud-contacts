@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "obsidian-dav",
+	"name": "Obsidan DAV",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "This is a sample plugin for Obsidian. This plugin demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "This is a Obsidan plugin that fetches contacts from iCloud",
+	"author": "Truls Aagaard",
+	"authorUrl": "trulsaagaard.com",
+	"fundingUrl": "trulsaagaard.com",
 	"isDesktopOnly": false
 }
