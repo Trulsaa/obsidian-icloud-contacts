@@ -115,7 +115,6 @@ export async function fetchContacts(username: string, password: string) {
 	};
 	const { rootUrl, homeUrl } = await login(authHeaders);
 	const addressBooks = await fetchAddressBooks(homeUrl, rootUrl, authHeaders);
-	console.log({ addressBooks });
 	const vCards = await fetchVCards({
 		addressBook: addressBooks[0],
 		headers: authHeaders,

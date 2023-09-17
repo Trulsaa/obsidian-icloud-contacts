@@ -2,7 +2,6 @@ import { parse as vcfParse } from "vcf";
 
 export function parseVCard(vcardString: string) {
 	const jCard = vcfParse(vcardString)[0].toJSON();
-	console.log(JSON.stringify(jCard, null, 2));
 
 	return jCard[1].reduce<{ [key: string]: any }>((o, item) => {
 		const key = item[0];

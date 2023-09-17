@@ -1,4 +1,4 @@
-import { normalizePath, Plugin, TFile } from "obsidian";
+import { normalizePath, Plugin, TFile, Notice } from "obsidian";
 import * as path from "path";
 import { fetchContacts } from "src/iCloudClient";
 import { parseVCard } from "src/parser";
@@ -31,9 +31,9 @@ export default class ObsidianDav extends Plugin {
 		this.addCommand({
 			id: "update-contacts",
 			name: "Update Contacts",
-			callback: () => {
+			callback: async () => {
 				try {
-					this.updateContacts(
+					await this.updateContacts(
 						this.settings.username,
 						this.settings.password
 					);
@@ -76,7 +76,7 @@ export default class ObsidianDav extends Plugin {
 
 		let newContacts: any[] = [];
 		let modifiedContacts: any[] = [];
-		let skippedContactsCount = 0;
+		let skippedContacts: any[] = [];
 		for (const iCloudVCard of iCloudVCards) {
 			const existingContact = currentContacts.find((c) => {
 				return (
@@ -104,7 +104,7 @@ export default class ObsidianDav extends Plugin {
 							.data
 					);
 					const isFullNameModified =
-						existingContactFullName !== fullName;
+						existingContactFullName.replace(/\\/g, "") !== fullName;
 					if (isFullNameModified) {
 						await this.renameContactFile(
 							existingContactFullName,
@@ -121,7 +121,7 @@ export default class ObsidianDav extends Plugin {
 					}
 					modifiedContacts.push(iCloudVCard);
 				} else {
-					skippedContactsCount++;
+					skippedContacts.push(iCloudVCard);
 				}
 			} else {
 				// Create contact file
@@ -160,7 +160,10 @@ ${JSON.stringify(iCloudVCard)}
 					(i) => i.url === c.properties[iCloudVCardPropertieName].url
 				)
 		);
-		// How to format a path in nodejs
+
+		if (deletedContacts.length > 0) {
+			await this.createDeletedFolder();
+		}
 
 		// Move deleted contacts to deleted folder
 		for (const deletedContact of deletedContacts) {
@@ -173,23 +176,27 @@ ${JSON.stringify(iCloudVCard)}
 				deletedContact.properties[iCloudVCardPropertieName].data
 			);
 			await this.renameContactFile(
-				path.join(folder, deletedContactFullName + ".md"),
-				path.join(folder, deletedFolder, deletedContactFullName + ".md")
+				deletedContactFullName,
+				path.join(deletedFolder, deletedContactFullName)
 			);
 		}
 
-		console.log(
-			JSON.stringify(
-				{
-					newContacts,
-					modifiedContacts,
-					deletedContacts,
-					skippedContactsCount,
-				},
-				null,
-				2
-			)
-		);
+		let noticeText = "";
+		if (newContacts.length > 0)
+			noticeText += `Created ${newContacts.length}\n`;
+		if (modifiedContacts.length > 0)
+			noticeText += `Modified ${modifiedContacts.length}\n`;
+		if (deletedContacts.length > 0)
+			noticeText += `Deleted ${deletedContacts.length}\n`;
+		if (skippedContacts.length > 0)
+			noticeText += `Skipped ${skippedContacts.length}\n`;
+		new Notice(noticeText);
+		console.log({
+			newContacts,
+			modifiedContacts,
+			deletedContacts,
+			skippedContacts,
+		});
 	}
 
 	private async renameContactFile(
@@ -280,6 +287,7 @@ ${JSON.stringify(iCloudVCard)}
 			"version",
 			"xAbadr",
 			"xAbLabel",
+			"xAbShowAs",
 			"xImagehash",
 			"xImagetype",
 		];
@@ -353,6 +361,18 @@ ${properties}iCloudVCard: ${JSON.stringify(iCloudVCard)}
 			}
 		} catch (error) {
 			this.app.vault.createFolder(this.settings.folder);
+		}
+	}
+
+	async createDeletedFolder() {
+		const folderPath = path.join(this.settings.folder, deletedFolder);
+		try {
+			const stat = await this.app.vault.adapter.stat(folderPath);
+			if (!stat || stat.type !== "folder") {
+				throw new Error(`The ${this.settings.folder} is not a folder`);
+			}
+		} catch (error) {
+			this.app.vault.createFolder(folderPath);
 		}
 	}
 
