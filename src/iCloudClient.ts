@@ -3,7 +3,7 @@ import * as convert from "xml-js";
 import { ElementCompact } from "xml-js";
 
 type DAVObject = {
-	data?: any;
+	data: string;
 	etag: string;
 	url: string;
 };
@@ -87,24 +87,6 @@ const DAVNamespaceShort = {
 	CALDAV_APPLE: "ca",
 	DAV: "d",
 };
-
-/* export async function fetchContacts(username: string, password: string) {
-	const client = new DAVClient({
-		serverUrl: "https://contacts.icloud.com",
-		credentials: { username, password },
-		authMethod: "Basic",
-		defaultAccountType: "carddav",
-	});
-	await client.login();
-
-	const addressBooks = await client.fetchAddressBooks();
-
-	const iCloudVCards = await client.fetchVCards({
-		addressBook: addressBooks[0],
-	});
-
-	return iCloudVCards;
-} */
 
 const serverUrl = "https://contacts.icloud.com";
 const accountType: "carddav" | "caldav" = "carddav";
