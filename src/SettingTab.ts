@@ -5,12 +5,15 @@ export interface ObsidianDavSettings {
 	username: string;
 	password: string;
 	folder: string;
+	excludeKeys: string;
 }
 
 export const DEFAULT_SETTINGS: ObsidianDavSettings = {
 	username: "",
 	password: "",
 	folder: "Contacts",
+	excludeKeys:
+		"n photo prodid rev uid version xAbadr xAbLabel xAbShowAs xImagehash xImagetype xSocialprofile xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality xSocialprofile",
 };
 
 export class SettingTab extends PluginSettingTab {
@@ -36,14 +39,14 @@ export class SettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.username = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
 		let inputEl: TextComponent;
 		const apikeuEl = new Setting(containerEl)
 			.setName("iCloud app specific password")
 			.setDesc(
-				"You need to generate an app-specific password for your iCloud account."
+				"You need to generate an app-specific password for your iCloud account.",
 			)
 			.addText((text) =>
 				text
@@ -56,7 +59,7 @@ export class SettingTab extends PluginSettingTab {
 					.then((textEl) => {
 						inputEl = textEl;
 					})
-					.inputEl.setAttribute("type", "password")
+					.inputEl.setAttribute("type", "password"),
 			);
 
 		apikeuEl.addToggle((v) =>
@@ -66,7 +69,7 @@ export class SettingTab extends PluginSettingTab {
 				} else {
 					inputEl.inputEl.setAttribute("type", "password");
 				}
-			})
+			}),
 		);
 
 		containerEl.appendChild(
@@ -74,7 +77,7 @@ export class SettingTab extends PluginSettingTab {
 				text: "Create account OpenAI",
 				href: "https://support.apple.com/en-us/102654",
 				cls: "linkMoreInfo",
-			})
+			}),
 		);
 
 		new Setting(containerEl)
@@ -87,7 +90,24 @@ export class SettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.folder = value;
 						await this.plugin.saveSettings();
-					})
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Excluded keys)")
+			.setDesc(
+				"A space delimited list of all the keys that should be excluded in the properties of each contact. The data will still be pressent under the iCloudVCard propertie",
+			)
+			.addTextArea((text) =>
+				text
+					.setPlaceholder(
+						"Add space delimited list of keys to exclude",
+					)
+					.setValue(this.plugin.settings.excludeKeys)
+					.onChange(async (value) => {
+						this.plugin.settings.excludeKeys = value;
+						await this.plugin.saveSettings();
+					}),
 			);
 	}
 }

@@ -141,7 +141,7 @@ const fetchVCards = async (params: {
 		.map((url) =>
 			url.startsWith("http") || !url
 				? url
-				: new URL(url, addressBook.url).href
+				: new URL(url, addressBook.url).href,
 		)
 		.filter(urlFilter)
 		.map((url) => new URL(url).pathname);
@@ -272,7 +272,7 @@ async function collectionQuery(params: {
 async function fetchAddressBooks(
 	homeUrl?: string,
 	rootUrl?: string,
-	headers?: Record<string, string>
+	headers?: Record<string, string>,
 ): Promise<DAVAddressBook[]> {
 	const res = await propfind({
 		url: homeUrl,
@@ -289,7 +289,9 @@ async function fetchAddressBooks(
 	return Promise.all(
 		res
 			.filter((r: any) =>
-				Object.keys(r.props?.resourcetype ?? {}).includes("addressbook")
+				Object.keys(r.props?.resourcetype ?? {}).includes(
+					"addressbook",
+				),
 			)
 			.map((rs: any) => {
 				const displayName =
@@ -309,7 +311,7 @@ async function fetchAddressBooks(
 					collection: addr,
 					headers,
 				}),
-			}))
+			})),
 	);
 }
 
@@ -349,7 +351,7 @@ async function serviceDiscovery(headers: { authorization: string }) {
 
 async function fetchPrincipalUrl(
 	rootUrl: string,
-	headers: { authorization: string }
+	headers: { authorization: string },
 ) {
 	var _c, _d, _e, _f, _g;
 	const [response] = await propfind({
@@ -375,14 +377,14 @@ async function fetchPrincipalUrl(
 				: _f.href) !== null && _g !== void 0
 			? _g
 			: "",
-		rootUrl
+		rootUrl,
 	).href;
 }
 
 async function fetchHomeUrl(
 	rootUrl: string,
 	principalUrl: string,
-	headers: { authorization: string }
+	headers: { authorization: string },
 ) {
 	var _h, _j;
 
@@ -396,7 +398,7 @@ async function fetchHomeUrl(
 	});
 
 	const matched = responses.find((r: any) =>
-		urlContains(principalUrl, r.href)
+		urlContains(principalUrl, r.href),
 	);
 	if (!matched || !matched.ok) {
 		throw new Error("cannot find homeUrl");
@@ -410,12 +412,12 @@ async function fetchHomeUrl(
 				? void 0
 				: _h.calendarHomeSet.href
 			: (_j =
-					matched === null || matched === void 0
-						? void 0
-						: matched.props) === null || _j === void 0
-			? void 0
-			: _j.addressbookHomeSet.href,
-		rootUrl
+						matched === null || matched === void 0
+							? void 0
+							: matched.props) === null || _j === void 0
+			  ? void 0
+			  : _j.addressbookHomeSet.href,
+		rootUrl,
 	).href;
 	return result;
 }
@@ -459,7 +461,7 @@ function getDAVAttribute(nsArr: any) {
 				//@ts-ignore
 				[DAVAttributeMap[curr]]: curr,
 			}),
-		{}
+		{},
 	);
 }
 
@@ -478,9 +480,9 @@ async function davRequest(params: any) {
 								},
 							},
 						},
-						body
+						body,
 					),
-					{ _attributes: attributes }
+					{ _attributes: attributes },
 				),
 				{
 					compact: true,
@@ -492,14 +494,14 @@ async function davRequest(params: any) {
 						}
 						return name;
 					},
-				}
+				},
 		  )
 		: body;
 	const davResponse = await requestUrl({
 		url,
 		headers: Object.assign(
 			{ "Content-Type": "text/xml;charset=UTF-8" },
-			cleanupFalsy(headers)
+			cleanupFalsy(headers),
 		),
 		body: xmlBody,
 		method,
@@ -570,7 +572,7 @@ async function davRequest(params: any) {
 							? void 0
 							: //@ts-ignore
 							  matchArr.groups.status,
-						10
+						10,
 				  )
 				: davResponse.status,
 			statusText:
@@ -592,7 +594,7 @@ async function davRequest(params: any) {
 			).reduce((prev: any, curr: any) => {
 				return Object.assign(
 					Object.assign({}, prev),
-					curr === null || curr === void 0 ? void 0 : curr.prop
+					curr === null || curr === void 0 ? void 0 : curr.prop,
 				);
 			}, {}),
 		};
@@ -649,7 +651,7 @@ async function supportedReportSet(params: {
 	});
 	return (
 		res[0]?.props?.supportedReportSet?.supportedReport?.map(
-			(sr: { report: any }) => Object.keys(sr.report)[0]
+			(sr: { report: any }) => Object.keys(sr.report)[0],
 		) ?? []
 	);
 }

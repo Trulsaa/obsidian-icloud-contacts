@@ -59,7 +59,7 @@ export default class ObsidianDav extends Plugin {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			await this.loadData()
+			await this.loadData(),
 		);
 	}
 
@@ -72,11 +72,11 @@ export default class ObsidianDav extends Plugin {
 			await this.createFolder(this.settings.folder);
 			const iCloudVCards = await fetchContacts(
 				this.settings.username,
-				this.settings.password
+				this.settings.password,
 			);
 
 			const existingContacts = await this.getAllCurrentProperties(
-				this.settings.folder
+				this.settings.folder,
 			);
 
 			for (const iCloudVCard of iCloudVCards) {
@@ -100,17 +100,17 @@ export default class ObsidianDav extends Plugin {
 			body: string;
 		}[],
 		iCloudVCard: ICloudVCard,
-		options: { rewriteAll: boolean }
+		options: { rewriteAll: boolean },
 	) {
 		try {
 			const existingContact = this.getExistingContact(
 				existingContacts,
-				iCloudVCard
+				iCloudVCard,
 			);
 			if (existingContact) {
 				const isModified = this.isModified(
 					existingContact,
-					iCloudVCard
+					iCloudVCard,
 				);
 				if (isModified || options.rewriteAll) {
 					await this.updateContactFile(iCloudVCard, existingContact);
@@ -155,15 +155,16 @@ export default class ObsidianDav extends Plugin {
 			properties: Properties;
 			body: string;
 		}[],
-		iCloudVCards: ICloudVCard[]
+		iCloudVCards: ICloudVCard[],
 	) {
 		this.deletedContacts = existingContacts
 			.filter(
 				(c) =>
 					!iCloudVCards.some(
 						(i) =>
-							i.url === c.properties[iCloudVCardPropertieName].url
-					)
+							i.url ===
+							c.properties[iCloudVCardPropertieName].url,
+					),
 			)
 			.map((c) => c.properties[iCloudVCardPropertieName]);
 
@@ -183,20 +184,20 @@ export default class ObsidianDav extends Plugin {
 			const { fn: deletedContactFullName } = parseVCard(iCloudVCard.data);
 			await this.renameContactFile(
 				deletedContactFullName,
-				path.join(deletedFolder, deletedContactFullName)
+				path.join(deletedFolder, deletedContactFullName),
 			);
 		} catch (e) {
 			this.handleError(
 				"Error trying to move deleted contact",
 				e,
-				iCloudVCard
+				iCloudVCard,
 			);
 		}
 	}
 
 	private isModified(
 		existingContact: { properties: Properties; body: string },
-		iCloudVCard: ICloudVCard
+		iCloudVCard: ICloudVCard,
 	) {
 		return (
 			existingContact.properties[iCloudVCardPropertieName].etag !==
@@ -209,11 +210,11 @@ export default class ObsidianDav extends Plugin {
 			properties: Properties;
 			body: string;
 		}[],
-		iCloudVCard: ICloudVCard
+		iCloudVCard: ICloudVCard,
 	) {
 		return currentContacts.find(
 			(c) =>
-				c.properties[iCloudVCardPropertieName].url === iCloudVCard.url
+				c.properties[iCloudVCardPropertieName].url === iCloudVCard.url,
 		);
 	}
 
@@ -222,17 +223,17 @@ export default class ObsidianDav extends Plugin {
 		existingContact: {
 			properties: Properties;
 			body: string;
-		}
+		},
 	) {
 		const { contactHeader, fullName } =
 			this.createContactHeader(iCloudVCard);
 		if (!existingContact.properties[iCloudVCardPropertieName].data) {
 			throw new Error(
-				`existingContact.properties[${iCloudVCardPropertieName}].data`
+				`existingContact.properties[${iCloudVCardPropertieName}].data`,
 			);
 		}
 		const { fn: existingContactFullName } = parseVCard(
-			existingContact.properties[iCloudVCardPropertieName].data
+			existingContact.properties[iCloudVCardPropertieName].data,
 		);
 		const isFullNameModified =
 			existingContactFullName.replace(/\\/g, "") !== fullName;
@@ -258,15 +259,15 @@ export default class ObsidianDav extends Plugin {
 
 	private async renameContactFile(
 		existingContactFullName: string,
-		fullName: string | string[]
+		fullName: string | string[],
 	) {
 		const contactFile = this.app.vault.getAbstractFileByPath(
-			path.join(this.settings.folder, existingContactFullName + ".md")
+			path.join(this.settings.folder, existingContactFullName + ".md"),
 		);
 		if (contactFile instanceof TFile) {
 			await this.app.vault.rename(
 				contactFile,
-				path.join(this.settings.folder, fullName + ".md")
+				path.join(this.settings.folder, fullName + ".md"),
 			);
 		}
 	}
@@ -279,9 +280,9 @@ export default class ObsidianDav extends Plugin {
 				.filter(
 					(fileName) =>
 						fileName.endsWith(".md") &&
-						!fileName.contains(errorsFileName)
+						!fileName.contains(errorsFileName),
 				)
-				.map((fileName) => this.getContactProperties(fileName))
+				.map((fileName) => this.getContactProperties(fileName)),
 		);
 	}
 
@@ -304,11 +305,11 @@ export default class ObsidianDav extends Plugin {
 				!properties[iCloudVCardPropertieName].data
 			) {
 				throw new Error(
-					`properties[${iCloudVCardPropertieName}].data is undefined`
+					`properties[${iCloudVCardPropertieName}].data is undefined`,
 				);
 			}
 			const { fn: fullName } = parseVCard(
-				properties[iCloudVCardPropertieName].data
+				properties[iCloudVCardPropertieName].data,
 			);
 			const title = `# ${fullName}`;
 			const endOfContactHeader = content.indexOf(title) + title.length;
@@ -333,22 +334,10 @@ export default class ObsidianDav extends Plugin {
 		}
 
 		const parsedVCard: { [key: string]: string | string[] } = parseVCard(
-			iCloudVCard.data
+			iCloudVCard.data,
 		);
 
-		const unShowedKeys = [
-			"n",
-			"photo",
-			"prodid",
-			"rev",
-			"uid",
-			"version",
-			"xAbadr",
-			"xAbLabel",
-			"xAbShowAs",
-			"xImagehash",
-			"xImagetype",
-		];
+		const unShowedKeys = this.settings.excludeKeys.split(" ");
 
 		const contact = Object.entries(parsedVCard).reduce(
 			(o, [key, value]) => {
@@ -382,7 +371,7 @@ export default class ObsidianDav extends Plugin {
 				if (key === "fn") return { ...o, name: value };
 				return { ...o, [key]: value };
 			},
-			{}
+			{},
 		);
 
 		const fullName = (parsedVCard.fn as string).replace(/\\/g, "");
@@ -400,7 +389,7 @@ ${properties}iCloudVCard: ${JSON.stringify(iCloudVCard)}
 			const stat = await this.app.vault.adapter.stat(folderPath);
 			if (stat && stat.type === "folder")
 				return this.app.vault.getAbstractFileByPath(
-					folderPath
+					folderPath,
 				) as TFolder;
 			if (stat && stat.type === "file")
 				throw new Error(`${folderPath} already exists as a file`);
@@ -409,7 +398,7 @@ ${properties}iCloudVCard: ${JSON.stringify(iCloudVCard)}
 			this.handleError(
 				`Error trying to create the ${folderPath} folder`,
 				error,
-				{ folderPath }
+				{ folderPath },
 			);
 		}
 	}
@@ -417,7 +406,7 @@ ${properties}iCloudVCard: ${JSON.stringify(iCloudVCard)}
 	private async createErrorFile() {
 		const filePath = path.join(
 			this.settings.folder,
-			`${errorsFileName}.md`
+			`${errorsFileName}.md`,
 		);
 		const stat = await this.app.vault.adapter.stat(filePath);
 		if (stat && stat.type === "file")

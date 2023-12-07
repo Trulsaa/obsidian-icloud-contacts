@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-dav",
 	"name": "Obsidan DAV",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
 	"description": "This is a Obsidan plugin that fetches contacts from iCloud",
 	"author": "Truls Aagaard",
