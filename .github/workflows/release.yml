@@ -22,13 +22,9 @@ jobs:
                   npm install
                   npm run build
 
-            - name: Create release
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  tag="${GITHUB_REF#refs/tags/}"
-
-                  gh release create "$tag" \
-                    --title="$tag" \
-                    --draft \
-                    main.js manifest.json
+            - name: Create Release
+              # https://github.com/ncipollo/release-action
+              uses: ncipollo/release-action@v1.7.3
+              with:
+                  artifacts: "main.js,manifest.json"
+                  token: ${{ secrets.GITHUB_TOKEN }}
