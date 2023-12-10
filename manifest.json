@@ -1,7 +1,7 @@
 {
 	"id": "icloud-contacts",
 	"name": "iCloud Contacts",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"minAppVersion": "0.15.0",
 	"description": "This is a plugin that fetches contacts from iCloud and manages a file for each contact",
 	"author": "Truls Aagaard",
