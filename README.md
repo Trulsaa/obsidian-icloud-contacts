@@ -26,3 +26,7 @@ This plugin provides two commands. Use the command pallet to search for **Obsidi
 
 -   The **iCloudVCard** propperty needs is used to only update contacts that have been changed. I also like it as a backup of my contacts in my vault.
 -   This plugin is not affiliated with Apple in any way.
+
+## Thanks
+
+The IcloudClient in this codebase is copied and addapted from [tsdav](https://github.com/natelindev/tsdav). 
