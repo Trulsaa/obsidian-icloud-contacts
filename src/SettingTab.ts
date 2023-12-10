@@ -1,14 +1,14 @@
 import { App, PluginSettingTab, Setting, TextComponent } from "obsidian";
-import ObsidianDav from "../main";
+import ICloudContacts from "../main";
 
-export interface ObsidianDavSettings {
+export interface ICloudContactsSettings {
 	username: string;
 	password: string;
 	folder: string;
 	excludeKeys: string;
 }
 
-export const DEFAULT_SETTINGS: ObsidianDavSettings = {
+export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	username: "",
 	password: "",
 	folder: "Contacts",
@@ -17,9 +17,9 @@ export const DEFAULT_SETTINGS: ObsidianDavSettings = {
 };
 
 export class SettingTab extends PluginSettingTab {
-	plugin: ObsidianDav;
+	plugin: ICloudContacts;
 
-	constructor(app: App, plugin: ObsidianDav) {
+	constructor(app: App, plugin: ICloudContacts) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

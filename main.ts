@@ -1,10 +1,10 @@
-import { normalizePath, Plugin, TFile, Notice, TFolder } from "obsidian";
+import { Notice, Plugin, TFile, TFolder } from "obsidian";
 import * as path from "path";
 import { fetchContacts } from "src/iCloudClient";
 import { parseVCard } from "src/parser";
 import {
 	DEFAULT_SETTINGS,
-	ObsidianDavSettings,
+	ICloudContactsSettings,
 	SettingTab,
 } from "src/SettingTab";
 import * as YAML from "yaml";
@@ -26,8 +26,8 @@ const deletedFolder = "Deleted";
 const iCloudVCardPropertieName = "iCloudVCard";
 const errorsFileName = "Errors";
 
-export default class ObsidianDav extends Plugin {
-	settings: ObsidianDavSettings;
+export default class ICloudContacts extends Plugin {
+	settings: ICloudContactsSettings;
 	private newContacts: ICloudVCard[] = [];
 	private modifiedContacts: ICloudVCard[] = [];
 	private deletedContacts: ICloudVCard[] = [];
