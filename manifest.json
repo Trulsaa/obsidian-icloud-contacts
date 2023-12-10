@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-iCloud-contacts",
 	"name": "Obsidan iCloud contacts",
-	"version": "0.1.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
 	"description": "This is a Obsidan plugin that fetches contacts from iCloud and manages a file for each contact",
 	"author": "Truls Aagaard",
