@@ -352,8 +352,7 @@ async function serviceDiscovery(headers: { authorization: string }) {
 async function fetchPrincipalUrl(
 	rootUrl: string,
 	headers: { authorization: string },
-) {
-	var _c, _d, _e, _f, _g;
+): Promise<string> {
 	const [response] = await propfind({
 		url: rootUrl,
 		props: {
@@ -367,27 +366,15 @@ async function fetchPrincipalUrl(
 			throw new Error("Invalid credentials");
 		}
 	}
-	return new URL(
-		(_g =
-			(_f =
-				(_e = response.props) === null || _e === void 0
-					? void 0
-					: _e.currentUserPrincipal) === null || _f === void 0
-				? void 0
-				: _f.href) !== null && _g !== void 0
-			? _g
-			: "",
-		rootUrl,
-	).href;
+	return new URL(response.props?.currentUserPrincipal?.href ?? "", rootUrl)
+		.href;
 }
 
 async function fetchHomeUrl(
 	rootUrl: string,
 	principalUrl: string,
 	headers: { authorization: string },
-) {
-	var _h, _j;
-
+): Promise<string> {
 	const responses = await propfind({
 		url: principalUrl,
 		props: {
@@ -403,23 +390,8 @@ async function fetchHomeUrl(
 	if (!matched || !matched.ok) {
 		throw new Error("cannot find homeUrl");
 	}
-	const result = new URL(
-		accountType === "caldav"
-			? (_h =
-					matched === null || matched === void 0
-						? void 0
-						: matched.props) === null || _h === void 0
-				? void 0
-				: _h.calendarHomeSet.href
-			: (_j =
-						matched === null || matched === void 0
-							? void 0
-							: matched.props) === null || _j === void 0
-			  ? void 0
-			  : _j.addressbookHomeSet.href,
-		rootUrl,
-	).href;
-	return result;
+
+	return new URL(matched?.props?.addressbookHomeSet.href, rootUrl).href;
 }
 
 async function propfind(params: any) {
@@ -465,25 +437,18 @@ function getDAVAttribute(nsArr: any) {
 	);
 }
 
-async function davRequest(params: any) {
-	const { url, init, convertIncoming = true } = params;
+async function davRequest(params: any): Promise<DAVResponse[]> {
+	const { url, init, convertIncoming = true, parseOutgoing = true } = params;
 	const { headers = {}, body, namespace, method, attributes } = init;
 	const xmlBody = convertIncoming
 		? convert.js2xml(
-				Object.assign(
-					Object.assign(
-						{
-							_declaration: {
-								_attributes: {
-									version: "1.0",
-									encoding: "utf-8",
-								},
-							},
-						},
-						body,
-					),
-					{ _attributes: attributes },
-				),
+				{
+					_declaration: {
+						_attributes: { version: "1.0", encoding: "utf-8" },
+					},
+					...body,
+					_attributes: attributes,
+				},
 				{
 					compact: true,
 					spaces: 2,
@@ -497,6 +462,7 @@ async function davRequest(params: any) {
 				},
 		  )
 		: body;
+
 	const davResponse = await requestUrl({
 		url,
 		headers: Object.assign(
@@ -506,15 +472,16 @@ async function davRequest(params: any) {
 		body: xmlBody,
 		method,
 	});
+
 	const resText = davResponse.text;
-	const result = convert.xml2js(resText, {
+
+	const result: any = convert.xml2js(resText, {
 		compact: true,
 		trim: true,
-		textFn: (value, parentElement) => {
+		textFn: (value: any, parentElement: any) => {
 			try {
 				// This is needed for xml-js design reasons
 				// eslint-disable-next-line no-underscore-dangle
-				// @ts-ignore
 				const parentOfParent = parentElement._parent;
 				const pOpKeys = Object.keys(parentOfParent);
 				const keyNo = pOpKeys.length;
@@ -535,56 +502,37 @@ async function davRequest(params: any) {
 		// remove namespace & camelCase
 		elementNameFn: (attributeName) =>
 			camelCase(attributeName.replace(/^.+:/, "")),
-		attributesFn: (value) => {
-			const newVal = Object.assign({}, value);
-			//@ts-ignore
+		attributesFn: (value: any) => {
+			const newVal = { ...value };
 			delete newVal.xmlns;
 			return newVal;
 		},
 		ignoreDeclaration: true,
 	});
-	//@ts-ignore
+
 	const responseBodies = Array.isArray(result.multistatus.response)
-		? //@ts-ignore
-		  result.multistatus.response
-		: //@ts-ignore
-		  [result.multistatus.response];
+		? result.multistatus.response
+		: [result.multistatus.response];
+
 	return responseBodies.map((responseBody: any) => {
-		var _a, _b;
 		const statusRegex = /^\S+\s(?<status>\d+)\s(?<statusText>.+)$/;
 		if (!responseBody) {
 			return {
 				status: davResponse.status,
+				statusText: davResponse.text,
+				ok: davResponse.status >= 200 && davResponse.status < 300,
 			};
 		}
+
 		const matchArr = statusRegex.exec(responseBody.status);
+
 		return {
 			raw: result,
 			href: responseBody.href,
-			status: (
-				matchArr === null || matchArr === void 0
-					? void 0
-					: matchArr.groups
-			)
-				? Number.parseInt(
-						//@ts-ignore
-						matchArr === null || matchArr === void 0
-							? void 0
-							: //@ts-ignore
-							  matchArr.groups.status,
-						10,
-				  )
+			status: matchArr?.groups
+				? Number.parseInt(matchArr?.groups.status, 10)
 				: davResponse.status,
-			statusText:
-				(_b =
-					(_a =
-						matchArr === null || matchArr === void 0
-							? void 0
-							: matchArr.groups) === null || _a === void 0
-						? void 0
-						: _a.statusText) !== null && _b !== void 0
-					? _b
-					: davResponse.status,
+			statusText: matchArr?.groups?.statusText ?? davResponse.text,
 			ok: !responseBody.error,
 			error: responseBody.error,
 			responsedescription: responseBody.responsedescription,
@@ -592,10 +540,10 @@ async function davRequest(params: any) {
 				? responseBody.propstat
 				: [responseBody.propstat]
 			).reduce((prev: any, curr: any) => {
-				return Object.assign(
-					Object.assign({}, prev),
-					curr === null || curr === void 0 ? void 0 : curr.prop,
-				);
+				return {
+					...prev,
+					...curr?.prop,
+				};
 			}, {}),
 		};
 	});
