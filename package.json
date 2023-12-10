@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-icloud-contacts",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "This is a Obsidan plugin that fetches contacts from iCloud and manages a file for each contact",
 	"main": "main.js",
 	"scripts": {
