@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
-	"version": "1.0.1",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"name": "obsidian-icloud-contacts",
+	"version": "0.1.0",
+	"description": "This is a Obsidan plugin that fetches contacts from iCloud and manages a file for each contact",
 	"main": "main.js",
 	"scripts": {
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
@@ -11,7 +11,7 @@
 	},
 	"keywords": [],
 	"author": "",
-	"license": "MIT",
+	"license": "GPL-3.0",
 	"dependencies": {
 		"@types/node": "^16.11.6",
 		"@types/vcf": "^2.0.3",
