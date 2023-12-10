@@ -74,7 +74,7 @@ export class SettingTab extends PluginSettingTab {
 
 		containerEl.appendChild(
 			createEl("a", {
-				text: "Create account OpenAI",
+				text: "Create iCloud app specific password",
 				href: "https://support.apple.com/en-us/102654",
 				cls: "linkMoreInfo",
 			}),

@@ -1,9 +1,9 @@
 {
-	"id": "obsidian-dav",
-	"name": "Obsidan DAV",
-	"version": "1.0.1",
+	"id": "obsidian-iCloud-contacts",
+	"name": "Obsidan iCloud contacts",
+	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "This is a Obsidan plugin that fetches contacts from iCloud",
+	"description": "This is a Obsidan plugin that fetches contacts from iCloud and manages a file for each contact",
 	"author": "Truls Aagaard",
 	"authorUrl": "trulsaagaard.com",
 	"fundingUrl": "trulsaagaard.com",

@@ -69,6 +69,7 @@ export default class ObsidianDav extends Plugin {
 
 	async updateContacts(options = { rewriteAll: false }) {
 		try {
+			this.validateSettings();
 			await this.createFolder(this.settings.folder);
 			const iCloudVCards = await fetchContacts(
 				this.settings.username,
@@ -91,6 +92,17 @@ export default class ObsidianDav extends Plugin {
 			this.handleError("Error when running updateContacts", e, {
 				options,
 			});
+		}
+	}
+
+	private validateSettings() {
+		if (!this.settings.username) {
+			throw new Error("ICloud username is required in settings");
+		}
+		if (!this.settings.password) {
+			throw new Error(
+				"ICloud app specific password is required in settings",
+			);
 		}
 	}
 
