@@ -1,5 +1,4 @@
 import { Notice, Plugin, TFile, TFolder } from "obsidian";
-import * as path from "path";
 import { fetchContacts } from "src/iCloudClient";
 import { parseVCard } from "src/parser";
 import {
@@ -179,7 +178,7 @@ export default class ICloudContacts extends Plugin {
 			.map((c) => c.properties[iCloudVCardPropertieName]);
 
 		if (this.deletedContacts.length > 0) {
-			const folderPath = path.join(this.settings.folder, deletedFolder);
+			const folderPath = this.settings.folder + "/" + deletedFolder;
 			await this.createFolder(folderPath);
 		}
 
@@ -194,7 +193,7 @@ export default class ICloudContacts extends Plugin {
 			const { fn: deletedContactFullName } = parseVCard(iCloudVCard.data);
 			await this.renameContactFile(
 				deletedContactFullName,
-				path.join(deletedFolder, deletedContactFullName),
+				deletedFolder + "/" + deletedContactFullName,
 			);
 		} catch (e) {
 			this.handleError(
@@ -251,7 +250,7 @@ export default class ICloudContacts extends Plugin {
 			await this.renameContactFile(existingContactFullName, fullName);
 		}
 		const fileName = `${fullName}.md`;
-		const filePath = path.join(this.settings.folder, fileName);
+		const filePath = this.settings.folder + "/" + fileName;
 		const content = contactHeader + existingContact.body;
 		const contactFile = this.app.vault.getAbstractFileByPath(filePath);
 		if (contactFile instanceof TFile) {
@@ -263,7 +262,7 @@ export default class ICloudContacts extends Plugin {
 		const { contactHeader, fullName } =
 			this.createContactHeader(iCloudVCard);
 		const fileName = `${fullName}.md`;
-		const filePath = path.join(this.settings.folder, fileName);
+		const filePath = this.settings.folder + "/" + fileName;
 		await this.app.vault.create(filePath, contactHeader);
 	}
 
@@ -272,12 +271,12 @@ export default class ICloudContacts extends Plugin {
 		fullName: string | string[],
 	) {
 		const contactFile = this.app.vault.getAbstractFileByPath(
-			path.join(this.settings.folder, existingContactFullName + ".md"),
+			this.settings.folder + "/" + existingContactFullName + ".md",
 		);
 		if (contactFile instanceof TFile) {
 			await this.app.vault.rename(
 				contactFile,
-				path.join(this.settings.folder, fullName + ".md"),
+				this.settings.folder + "/" + fullName + ".md",
 			);
 		}
 	}
@@ -414,10 +413,7 @@ ${properties}iCloudVCard: ${JSON.stringify(iCloudVCard)}
 	}
 
 	private async createErrorFile() {
-		const filePath = path.join(
-			this.settings.folder,
-			`${errorsFileName}.md`,
-		);
+		const filePath = this.settings.folder + "/" + `${errorsFileName}.md`;
 		const stat = await this.app.vault.adapter.stat(filePath);
 		if (stat && stat.type === "file")
 			return this.app.vault.getAbstractFileByPath(filePath);
