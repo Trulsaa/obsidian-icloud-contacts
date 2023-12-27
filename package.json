@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-icloud-contacts",
 	"version": "0.1.5",
-	"description": "This is a plugin that fetches contacts from iCloud and manages a file for each contact",
+	"description": "Imports contacts from iCloud and manages a note for each contact.",
 	"main": "main.js",
 	"scripts": {
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
