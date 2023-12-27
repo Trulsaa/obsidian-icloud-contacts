@@ -6,6 +6,5 @@
 	"description": "Imports contacts from iCloud and manages a note for each contact.",
 	"author": "Truls Aagaard",
 	"authorUrl": "trulsaagaard.com",
-	"fundingUrl": "trulsaagaard.com",
 	"isDesktopOnly": false
 }
