@@ -73,7 +73,7 @@ export default class ICloudContacts extends Plugin {
 	async updateContacts(options = { rewriteAll: false }) {
 		try {
 			this.validateSettings();
-			await this.createFolder(this.settings.folder);
+			await this.app.vault.createFolder(this.settings.folder);
 			const iCloudVCards = await fetchContacts(
 				this.settings.username,
 				this.settings.password,
@@ -185,7 +185,7 @@ export default class ICloudContacts extends Plugin {
 
 		if (this.deletedContacts.length > 0) {
 			const folderPath = this.settings.folder + "/" + deletedFolder;
-			await this.createFolder(folderPath);
+			await this.app.vault.createFolder(folderPath);
 		}
 
 		// Move deleted contacts to deleted folder
@@ -397,25 +397,6 @@ ${properties}iCloudVCard: ${JSON.stringify(iCloudVCard)}
 # ${fullName}`;
 
 		return { contactHeader, fullName };
-	}
-
-	private async createFolder(folderPath: string) {
-		try {
-			const stat = await this.app.vault.adapter.stat(folderPath);
-			if (stat && stat.type === "folder")
-				return this.app.vault.getAbstractFileByPath(
-					folderPath,
-				) as TFolder;
-			if (stat && stat.type === "file")
-				throw new Error(`${folderPath} already exists as a file`);
-			return this.app.vault.createFolder(folderPath);
-		} catch (error) {
-			this.handleError(
-				`Error trying to create the ${folderPath} folder`,
-				error,
-				{ folderPath },
-			);
-		}
 	}
 
 	private async createErrorFile() {
