@@ -9,8 +9,6 @@ import {
 } from "src/SettingTab";
 import * as YAML from "yaml";
 
-// Remember to rename these classes and interfaces!
-
 type ICloudVCard = {
 	url: string;
 	etag: string;
