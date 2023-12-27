@@ -1,4 +1,11 @@
-import { Notice, Plugin, TFile, TFolder } from "obsidian";
+import {
+	Notice,
+	parseYaml,
+	Plugin,
+	stringifyYaml,
+	TFile,
+	TFolder,
+} from "obsidian";
 import { fetchContacts } from "src/iCloudClient";
 import { parseVCard } from "src/parser";
 import {
@@ -6,7 +13,6 @@ import {
 	ICloudContactsSettings,
 	SettingTab,
 } from "src/SettingTab";
-import * as YAML from "yaml";
 
 type ICloudVCard = {
 	url: string;
@@ -308,7 +314,7 @@ export default class ICloudContacts extends Plugin {
 			const properties: {
 				[key: string]: string | string[] | ICloudVCard;
 				iCloudVCard: ICloudVCard;
-			} = YAML.parse(propertiesString);
+			} = parseYaml(propertiesString);
 			if (
 				!properties[iCloudVCardPropertieName] ||
 				!properties[iCloudVCardPropertieName].data
@@ -384,7 +390,7 @@ export default class ICloudContacts extends Plugin {
 		);
 
 		const fullName = (parsedVCard.fn as string).replace(/\\/g, "");
-		const properties = YAML.stringify(contact);
+		const properties = stringifyYaml(contact);
 		const contactHeader = `---
 ${properties}iCloudVCard: ${JSON.stringify(iCloudVCard)}
 ---
