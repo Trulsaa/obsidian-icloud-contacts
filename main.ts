@@ -389,6 +389,10 @@ export default class ICloudContacts extends Plugin {
 			{},
 		);
 
+		if (!parsedVCard.fn || typeof parsedVCard.fn !== "string")
+			throw new Error(
+				`The FN field of this parsedVCard is undefined. This value should have been set by the server when creating the card`,
+			);
 		const fullName = (parsedVCard.fn as string).replace(/\\/g, "");
 		const properties = stringifyYaml(contact);
 		const contactHeader = `---
