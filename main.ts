@@ -7,7 +7,7 @@ import {
 	TFolder,
 } from "obsidian";
 import { fetchContacts } from "src/iCloudClient";
-import { parseVCard } from "src/parser";
+import { parseVCard, getFullName } from "src/parser";
 import {
 	DEFAULT_SETTINGS,
 	ICloudContactsSettings,
@@ -196,7 +196,7 @@ export default class ICloudContacts extends Plugin {
 
 	private async moveDeletedContact(iCloudVCard: ICloudVCard) {
 		try {
-			const { fn: deletedContactFullName } = parseVCard(iCloudVCard.data);
+			const deletedContactFullName = getFullName(iCloudVCard.data);
 			await this.renameContactFile(
 				deletedContactFullName,
 				deletedFolder + "/" + deletedContactFullName,
@@ -247,7 +247,7 @@ export default class ICloudContacts extends Plugin {
 				`existingContact.properties[${iCloudVCardPropertieName}].data`,
 			);
 		}
-		const { fn: existingContactFullName } = parseVCard(
+		const existingContactFullName = getFullName(
 			existingContact.properties[iCloudVCardPropertieName].data,
 		);
 		const isFullNameModified =
@@ -323,7 +323,7 @@ export default class ICloudContacts extends Plugin {
 					`properties[${iCloudVCardPropertieName}].data is undefined`,
 				);
 			}
-			const { fn: fullName } = parseVCard(
+			const fullName = getFullName(
 				properties[iCloudVCardPropertieName].data,
 			);
 			const title = `# ${fullName}`;
@@ -348,52 +348,69 @@ export default class ICloudContacts extends Plugin {
 			throw new Error("iCloudVCard.data is undefined");
 		}
 
-		const parsedVCard: { [key: string]: string | string[] } = parseVCard(
-			iCloudVCard.data,
-		);
+		const parsedVCards = parseVCard(iCloudVCard.data);
 
 		const unShowedKeys = this.settings.excludeKeys.split(" ");
 
-		const contact = Object.entries(parsedVCard).reduce(
-			(o, [key, value]) => {
+		const contact = parsedVCards.reduce(
+			(o, { key, value }, _i, parsedVCards) => {
 				if (unShowedKeys.indexOf(key) > -1) return o;
-				if (key === "org")
+				if (key === "org") {
+					const organization = (value as string).replace(";", "");
+					if (organization) {
+						return {
+							...o,
+							organization: (value as string).replace(";", ""),
+						};
+					}
+					return o;
+				}
+				if (key === "tel") {
+					const telephones = parsedVCards.filter(
+						({ key }) => key === "tel",
+					);
 					return {
 						...o,
-						organization: (value as string).replace(";", ""),
+						telephone: telephones.map((t) => t.value),
 					};
-				if (key === "tel")
+				}
+				if (key === "email") {
+					const emails = parsedVCards.filter(
+						({ key }) => key === "email",
+					);
 					return {
 						...o,
-						telephone: Array.isArray(value) ? value : [value],
+						email: emails.map((t) => t.value),
 					};
-				if (key === "email")
+				}
+				if (key === "adr") {
+					const addresses = parsedVCards.filter(
+						({ key }) => key === "adr",
+					);
 					return {
 						...o,
-						email: Array.isArray(value) ? value : [value],
+						addresses: addresses.map((t) =>
+							(t.value as string[]).filter((v) => !!v).join(", "),
+						),
 					};
-				if (key === "adr")
+				}
+				if (key === "url") {
+					const urls = parsedVCards.filter(
+						({ key }) => key === "url",
+					);
 					return {
 						...o,
-						addresses: Array.isArray(value) ? value : [value],
+						url: urls.map((t) => t.value),
 					};
-				if (key === "url")
-					return {
-						...o,
-						url: Array.isArray(value) ? value : [value],
-					};
+				}
 				if (key === "bday") return { ...o, birthday: value };
 				if (key === "fn") return { ...o, name: value };
 				return { ...o, [key]: value };
 			},
-			{},
+			{ name: getFullName(iCloudVCard.data).replace(/\\/g, "") },
 		);
 
-		if (!parsedVCard.fn || typeof parsedVCard.fn !== "string")
-			throw new Error(
-				`The FN field of this parsedVCard is undefined. This value should have been set by the server when creating the card`,
-			);
-		const fullName = (parsedVCard.fn as string).replace(/\\/g, "");
+		let fullName = contact.name;
 		const properties = stringifyYaml(contact);
 		const contactHeader = `---
 ${properties}iCloudVCard: ${JSON.stringify(iCloudVCard)}
