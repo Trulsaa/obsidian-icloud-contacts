@@ -26,7 +26,9 @@ export function getFullName(vCardString: string): string {
 	const isOrg =
 		parsedVCard.find(({ key }) => key === "xAbShowAs")?.value === "COMPANY";
 	if (isOrg) {
-		return parsedVCard.find(({ key }) => key === "org")?.value as string;
+		return (
+			parsedVCard.find(({ key }) => key === "org")?.value as string
+		).replace(/;$/, "");
 	}
 
 	const fullName = parsedVCard.find(({ key }) => key === "fn");

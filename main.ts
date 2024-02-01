@@ -360,7 +360,7 @@ export default class ICloudContacts extends Plugin {
 					if (organization) {
 						return {
 							...o,
-							organization: (value as string).replace(";", ""),
+							organization: (value as string).replace(/;$/, ""),
 						};
 					}
 					return o;

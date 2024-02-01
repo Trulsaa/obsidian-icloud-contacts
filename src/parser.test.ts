@@ -1,11 +1,11 @@
 import { describe, expect, test } from "@jest/globals";
-import { ParsedVCard, parseVCard } from "./parser";
+import { getFullName, ParsedVCard, parseVCard } from "./parser";
 
 function padVCard(vCardString: string) {
 	return `BEGIN:VCARD\r\nVERSION:3.0\r\n${vCardString}\r\nEND:VCARD`;
 }
 
-const testCases = [
+const parseVCardTestCases = [
 	[
 		"NICKNAME:Lars",
 		[{ key: "nickname", meta: {}, type: "text", value: "Lars" }],
@@ -135,14 +135,29 @@ const testCases = [
 	return [vCardString, expected];
 });
 
-describe("vCardToYaml", () => {
-	test.each(testCases)(
-		"Should parse %s",
-		(vCardString: string, expected: ParsedVCard[]) => {
-			expect(parseVCard(padVCard(vCardString))).toEqual([
-				{ key: "version", meta: {}, type: "text", value: "3.0" },
-				...expected,
-			]);
-		},
-	);
+const getFullNameTestCases = [
+	["ORG:Belhaven;\r\nX-ABShowAs:COMPANY", "Belhaven"],
+];
+
+describe("parser", () => {
+	describe("parseVCard", () => {
+		test.each(parseVCardTestCases)(
+			"Should parse %s",
+			(vCardString: string, expected: ParsedVCard[]) => {
+				expect(parseVCard(padVCard(vCardString))).toEqual([
+					{ key: "version", meta: {}, type: "text", value: "3.0" },
+					...expected,
+				]);
+			},
+		);
+	});
+
+	describe("getFullName", () => {
+		test.each(getFullNameTestCases)(
+			"Should get fullname from %s",
+			(vCardString: string, expected: string) => {
+				expect(getFullName(padVCard(vCardString))).toEqual(expected);
+			},
+		);
+	});
 });
