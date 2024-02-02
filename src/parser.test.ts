@@ -76,7 +76,7 @@ const parseVCardTestCases = [
 			},
 		],
 	],
-	["ORG:;", [{ key: "org", value: ";" }]],
+	["ORG:;", [{ key: "org", value: ["", ""] }]],
 	[
 		"EMAIL:larslarsen@gmail.com",
 		[{ key: "email", value: "larslarsen@gmail.com" }],
@@ -119,10 +119,11 @@ const parseVCardTestCases = [
 	[
 		"ORG:ATT;\r\nX-ABShowAs:COMPANY",
 		[
-			{ key: "org", value: "ATT;" },
+			{ key: "org", value: ["ATT", ""] },
 			{ key: "xAbShowAs", value: "COMPANY" },
 		],
 	],
+	["ORG:ATT;IT", [{ key: "org", value: ["ATT", "IT"] }]],
 	[
 		"TEL;type=pref:+18003310500",
 		[{ key: "tel", value: "+18003310500", meta: { type: "pref" } }],

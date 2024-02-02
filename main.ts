@@ -356,14 +356,22 @@ export default class ICloudContacts extends Plugin {
 			(o, { key, value }, _i, parsedVCards) => {
 				if (unShowedKeys.indexOf(key) > -1) return o;
 				if (key === "org") {
-					const organization = (value as string).replace(";", "");
+					const organization = (value as string[])[0];
+					const departement = (value as string[])[1];
+					let newO: any = o;
 					if (organization) {
-						return {
-							...o,
-							organization: (value as string).replace(/;$/, ""),
+						newO = {
+							...newO,
+							organization,
 						};
 					}
-					return o;
+					if (departement) {
+						newO = {
+							...newO,
+							departement,
+						};
+					}
+					return newO;
 				}
 				if (key === "tel") {
 					const telephones = parsedVCards.filter(

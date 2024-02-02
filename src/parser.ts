@@ -12,11 +12,14 @@ export function parseVCard(vcardString: string): ParsedVCard[] {
 	// console.log("jCard: ", JSON.stringify(jCard[1].slice(1), null, 2));
 
 	return jCard[1].map((item) => {
+		const key = item[0];
+		let value = item[3];
+		if (key === "org") value = (item[3] as string).split(";");
 		return {
-			key: item[0],
+			key,
 			meta: item[1],
 			type: item[2],
-			value: item[3],
+			value,
 		};
 	});
 }
@@ -27,8 +30,8 @@ export function getFullName(vCardString: string): string {
 		parsedVCard.find(({ key }) => key === "xAbShowAs")?.value === "COMPANY";
 	if (isOrg) {
 		return (
-			parsedVCard.find(({ key }) => key === "org")?.value as string
-		).replace(/;$/, "");
+			parsedVCard.find(({ key }) => key === "org")?.value as string[]
+		)[0];
 	}
 
 	const fullName = parsedVCard.find(({ key }) => key === "fn");
