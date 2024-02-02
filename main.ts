@@ -280,7 +280,7 @@ export default class ICloudContacts extends Plugin {
 			this.settings.folder + "/" + existingContactFullName + ".md",
 		);
 		if (contactFile instanceof TFile) {
-			await this.app.vault.rename(
+			await this.app.fileManager.renameFile(
 				contactFile,
 				this.settings.folder + "/" + fullName + ".md",
 			);
