@@ -128,6 +128,17 @@ const parseVCardTestCases = [
 		"TEL;type=pref:+18003310500",
 		[{ key: "tel", value: "+18003310500", meta: { type: "pref" } }],
 	],
+	[
+		"item3.X-ABRELATEDNAMES;type=pref:Rita Larsen\r\nitem3.X-ABLabel:_$!<Daughter>!$_\r\nitem4.X-ABRELATEDNAMES:Peggy Larsen\r\nitem4.X-ABLabel:_$!<Daughter>!$_\r\nitem5.X-ABRELATEDNAMES:Frida Larsen\r\nitem5.X-ABLabel:_$!<Daughter>!$_",
+		[
+			{ key: "xAbrelatednames", value: "Rita Larsen", meta: { type: "pref", group: "item3" } },
+			{ key: "xAbrelatednames", value: "Peggy Larsen", meta: {  group: "item4" } },
+			{ key: "xAbrelatednames", value: "Frida Larsen", meta: {  group: "item5" } },
+			{ key: "xAbLabel", value: "_$!<Daughter>!$_", meta: {  group: "item3" } },
+			{ key: "xAbLabel", value: "_$!<Daughter>!$_", meta: {  group: "item4" } },
+			{ key: "xAbLabel", value: "_$!<Daughter>!$_", meta: {  group: "item5" } },
+		],
+	],
 ].map(([vCardString, expected]: any) => {
 	for (const e of expected) {
 		if (!e.meta) e.meta = {};
