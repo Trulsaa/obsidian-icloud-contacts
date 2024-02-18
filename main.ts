@@ -353,7 +353,7 @@ export default class ICloudContacts extends Plugin {
 		const unShowedKeys = this.settings.excludeKeys.split(" ");
 
 		const contact = parsedVCards.reduce(
-			(o, { key, value }, _i, parsedVCards) => {
+			(o, { key, value, meta }, _i, parsedVCards) => {
 				if (unShowedKeys.indexOf(key) > -1) return o;
 				if (key === "org") {
 					const organization = (value as string[])[0];
@@ -409,6 +409,27 @@ export default class ICloudContacts extends Plugin {
 					return {
 						...o,
 						url: urls.map((t) => t.value),
+					};
+				}
+				if (key === "xAbrelatednames") {
+					const group = meta.group;
+					const relation = parsedVCards.find(
+						({ key, meta }) =>
+							meta.group === group && key === "xAbLabel",
+					);
+					const presentableRelation = relation.value
+						.replace("_$!<", "")
+						.replace(">!$_", "");
+					const relationValue = `[[${value}|${presentableRelation}: ${value}]]`;
+					if (o.relation) {
+						return {
+							...o,
+							relation: [...o.relation, relationValue],
+						};
+					}
+					return {
+						...o,
+						relation: [relationValue],
 					};
 				}
 				if (key === "bday") return { ...o, birthday: value };
