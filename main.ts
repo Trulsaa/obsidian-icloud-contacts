@@ -273,6 +273,7 @@ export default class ICloudContacts extends Plugin {
 			for (const [key, value] of Object.entries(frontMatter)) {
 				fm[key] = value;
 			}
+			fm[iCloudVCardPropertieName] = iCloudVCard
 		});
 	}
 
