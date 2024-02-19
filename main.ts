@@ -6,8 +6,9 @@ import {
 	TFile,
 	TFolder,
 } from "obsidian";
+import { createFrontmatter } from "src/frontMatter";
 import { fetchContacts } from "src/iCloudClient";
-import { parseVCard, getFullName } from "src/parser";
+import { parseVCard, getFullName, ParsedVCard } from "src/parser";
 import {
 	DEFAULT_SETTINGS,
 	ICloudContactsSettings,
@@ -265,15 +266,25 @@ export default class ICloudContacts extends Plugin {
 	}
 
 	private async createContactFile(iCloudVCard: ICloudVCard) {
-		const frontMatter = this.createFrontmatter(iCloudVCard);
-		const fullName = getFullName(iCloudVCard.data);
+		if (!iCloudVCard.data) {
+			throw new Error("iCloudVCard.data is undefined");
+		}
+
+		const unShowedKeys = this.settings.excludeKeys.split(" ");
+		const parsedVCards = parseVCard(iCloudVCard.data);
+		const fullName = getFullName(iCloudVCard.data).replace(/\\/g, "");
+		const frontMatter = createFrontmatter(
+			parsedVCards,
+			unShowedKeys,
+			fullName,
+		);
 		const filePath = `${this.settings.folder}/${fullName}.md`;
 		const newFile = await this.app.vault.create(filePath, `# ${fullName}`);
 		await this.app.fileManager.processFrontMatter(newFile, (fm) => {
 			for (const [key, value] of Object.entries(frontMatter)) {
 				fm[key] = value;
 			}
-			fm[iCloudVCardPropertieName] = iCloudVCard
+			fm[iCloudVCardPropertieName] = iCloudVCard;
 		});
 	}
 
@@ -349,93 +360,22 @@ export default class ICloudContacts extends Plugin {
 	}
 
 	private createContactHeader(iCloudVCard: ICloudVCard) {
-		const contact = this.createFrontmatter(iCloudVCard);
-
-		let fullName = contact.name;
-		const properties = stringifyYaml(contact);
-		const contactHeader = `---
-${properties}iCloudVCard: ${JSON.stringify(iCloudVCard)}
----
-# ${fullName}`;
-
-		return { contactHeader, fullName };
-	}
-
-	private createFrontmatter(iCloudVCard: ICloudVCard) {
 		if (!iCloudVCard.data) {
 			throw new Error("iCloudVCard.data is undefined");
 		}
 
-		const parsedVCards = parseVCard(iCloudVCard.data);
-
 		const unShowedKeys = this.settings.excludeKeys.split(" ");
+		const parsedVCards = parseVCard(iCloudVCard.data);
+		const fullName = getFullName(iCloudVCard.data).replace(/\\/g, "");
+		const contact = createFrontmatter(parsedVCards, unShowedKeys, fullName);
 
-		const contact = parsedVCards.reduce(
-			(o, { key, value }, _i, parsedVCards) => {
-				if (unShowedKeys.indexOf(key) > -1) return o;
-				if (key === "org") {
-					const organization = (value as string[])[0];
-					const departement = (value as string[])[1];
-					let newO: any = o;
-					if (organization) {
-						newO = {
-							...newO,
-							organization,
-						};
-					}
-					if (departement) {
-						newO = {
-							...newO,
-							departement,
-						};
-					}
-					return newO;
-				}
-				if (key === "tel") {
-					const telephones = parsedVCards.filter(
-						({ key }) => key === "tel",
-					);
-					return {
-						...o,
-						telephone: telephones.map((t) => t.value),
-					};
-				}
-				if (key === "email") {
-					const emails = parsedVCards.filter(
-						({ key }) => key === "email",
-					);
-					return {
-						...o,
-						email: emails.map((t) => t.value),
-					};
-				}
-				if (key === "adr") {
-					const addresses = parsedVCards.filter(
-						({ key }) => key === "adr",
-					);
-					return {
-						...o,
-						addresses: addresses.map((t) =>
-							(t.value as string[]).filter((v) => !!v).join(", "),
-						),
-					};
-				}
-				if (key === "url") {
-					const urls = parsedVCards.filter(
-						({ key }) => key === "url",
-					);
-					return {
-						...o,
-						url: urls.map((t) => t.value),
-					};
-				}
-				if (key === "bday") return { ...o, birthday: value };
-				if (key === "fn") return { ...o, name: value };
-				return { ...o, [key]: value };
-			},
-			{ name: getFullName(iCloudVCard.data).replace(/\\/g, "") },
-		);
-		return contact;
+		const properties = stringifyYaml(contact);
+		const contactHeader = `---
+${properties}${iCloudVCardPropertieName}: ${JSON.stringify(iCloudVCard)}
+---
+# ${fullName}`;
+
+		return { contactHeader, fullName };
 	}
 
 	private async getCreateFolder(folderPath: string) {
