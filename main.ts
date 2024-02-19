@@ -265,11 +265,15 @@ export default class ICloudContacts extends Plugin {
 	}
 
 	private async createContactFile(iCloudVCard: ICloudVCard) {
-		const { contactHeader, fullName } =
-			this.createContactHeader(iCloudVCard);
-		const fileName = `${fullName}.md`;
-		const filePath = this.settings.folder + "/" + fileName;
-		await this.app.vault.create(filePath, contactHeader);
+		const frontMatter = this.createFrontmatter(iCloudVCard);
+		const fullName = getFullName(iCloudVCard.data);
+		const filePath = `${this.settings.folder}/${fullName}.md`;
+		const newFile = await this.app.vault.create(filePath, `# ${fullName}`);
+		await this.app.fileManager.processFrontMatter(newFile, (fm) => {
+			for (const [key, value] of Object.entries(frontMatter)) {
+				fm[key] = value;
+			}
+		});
 	}
 
 	private async renameContactFile(
@@ -344,6 +348,19 @@ export default class ICloudContacts extends Plugin {
 	}
 
 	private createContactHeader(iCloudVCard: ICloudVCard) {
+		const contact = this.createFrontmatter(iCloudVCard);
+
+		let fullName = contact.name;
+		const properties = stringifyYaml(contact);
+		const contactHeader = `---
+${properties}iCloudVCard: ${JSON.stringify(iCloudVCard)}
+---
+# ${fullName}`;
+
+		return { contactHeader, fullName };
+	}
+
+	private createFrontmatter(iCloudVCard: ICloudVCard) {
 		if (!iCloudVCard.data) {
 			throw new Error("iCloudVCard.data is undefined");
 		}
@@ -417,15 +434,7 @@ export default class ICloudContacts extends Plugin {
 			},
 			{ name: getFullName(iCloudVCard.data).replace(/\\/g, "") },
 		);
-
-		let fullName = contact.name;
-		const properties = stringifyYaml(contact);
-		const contactHeader = `---
-${properties}iCloudVCard: ${JSON.stringify(iCloudVCard)}
----
-# ${fullName}`;
-
-		return { contactHeader, fullName };
+		return contact;
 	}
 
 	private async getCreateFolder(folderPath: string) {
