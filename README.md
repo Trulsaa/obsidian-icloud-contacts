@@ -30,3 +30,9 @@ This plugin provides two commands. Use the command pallet to search for **Obsidi
 ## Thanks
 
 The IcloudClient in this codebase is copied and addapted from [tsdav](https://github.com/natelindev/tsdav). 
+
+## Support
+
+If you want to support me and my work, you can bye me a coffee.
+
+<script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="Truls" data-color="#FFDD00" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" ></script>
