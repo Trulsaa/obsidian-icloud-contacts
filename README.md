@@ -33,6 +33,6 @@ The IcloudClient in this codebase is copied and addapted from [tsdav](https://gi
 
 ## Support
 
-If you want to support me and my work, you can bye me a coffee.
+If you want to support me and my work, you can [bye me a coffee](https://www.buymeacoffee.com/truls).
 
 <img src="images/bmc_qr.png" alt="drawing" width="200"/>
