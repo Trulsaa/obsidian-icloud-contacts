@@ -270,13 +270,14 @@ export default class ICloudContacts extends Plugin {
 			throw new Error("iCloudVCard.data is undefined");
 		}
 
-		const unShowedKeys = this.settings.excludeKeys.split(" ");
+		const unShowedKeys = this.settings.excludeKeys.split(/\s+/);
 		const parsedVCards = parseVCard(iCloudVCard.data);
-		const fullName = getFullName(iCloudVCard.data).replace(/\\/g, "");
+		const fullName = getFullName(iCloudVCard.data);
 		const frontMatter = createFrontmatter(
 			parsedVCards,
 			unShowedKeys,
 			fullName,
+			this.settings,
 		);
 		const filePath = `${this.settings.folder}/${fullName}.md`;
 		const newFile = await this.app.vault.create(filePath, `# ${fullName}`);
@@ -364,10 +365,15 @@ export default class ICloudContacts extends Plugin {
 			throw new Error("iCloudVCard.data is undefined");
 		}
 
-		const unShowedKeys = this.settings.excludeKeys.split(" ");
+		const unShowedKeys = this.settings.excludeKeys.split(/\s+/);
 		const parsedVCards = parseVCard(iCloudVCard.data);
-		const fullName = getFullName(iCloudVCard.data).replace(/\\/g, "");
-		const contact = createFrontmatter(parsedVCards, unShowedKeys, fullName);
+		const fullName = getFullName(iCloudVCard.data);
+		const contact = createFrontmatter(
+			parsedVCards,
+			unShowedKeys,
+			fullName,
+			this.settings,
+		);
 
 		const properties = stringifyYaml(contact);
 		const contactHeader = `---

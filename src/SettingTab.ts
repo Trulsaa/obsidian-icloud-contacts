@@ -5,6 +5,7 @@ export interface ICloudContactsSettings {
 	username: string;
 	password: string;
 	folder: string;
+	addLabels: boolean;
 	excludeKeys: string;
 }
 
@@ -12,6 +13,7 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	username: "",
 	password: "",
 	folder: "Contacts",
+	addLabels: false,
 	excludeKeys:
 		"n photo prodid rev uid version xAbadr xAbLabel xAbShowAs xImagehash xImagetype xSocialprofile xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality xSocialprofile",
 };
@@ -89,6 +91,18 @@ export class SettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.folder)
 					.onChange(async (value) => {
 						this.plugin.settings.folder = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Add labels")
+			.setDesc("Add labels to telephone numbers and emails.")
+			.addToggle((bool) =>
+				bool
+					.setValue(this.plugin.settings.addLabels)
+					.onChange(async (value) => {
+						this.plugin.settings.addLabels = value;
 						await this.plugin.saveSettings();
 					}),
 			);
