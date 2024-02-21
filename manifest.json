@@ -1,7 +1,7 @@
 {
 	"id": "icloud-contacts",
 	"name": "iCloud Contacts",
-	"version": "0.1.11",
+	"version": "0.1.12",
 	"minAppVersion": "0.15.0",
 	"description": "Imports contacts from iCloud and manages a note for each contact.",
 	"author": "Truls Aagaard",
