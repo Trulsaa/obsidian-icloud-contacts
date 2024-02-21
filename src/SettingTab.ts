@@ -97,7 +97,7 @@ export class SettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Add labels")
-			.setDesc("Add labels to telephone numbers and emails.")
+			.setDesc("Add labels to telephone numbers and emails. Make sure to run the 'Update all Contacts' function if you want labels on existing contacts. Otherwise labels will only apply to new and updated contacts after running 'Update Contacts'")
 			.addToggle((bool) =>
 				bool
 					.setValue(this.plugin.settings.addLabels)
