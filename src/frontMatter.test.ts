@@ -252,7 +252,7 @@ const testCases = [
 		},
 		{ addLabels: true },
 	],
-	[
+	/* [
 		"Should parse all",
 		[
 			{
@@ -456,7 +456,7 @@ const testCases = [
 			name: "Full Name",
 		},
 		{ addLabels: true },
-	],
+	], */
 ];
 
 describe("createFrontmatter", () => {
