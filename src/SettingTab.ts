@@ -15,7 +15,7 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	folder: "Contacts",
 	addLabels: false,
 	excludeKeys:
-		"n photo prodid rev uid version xAbadr xAbLabel xAbShowAs xImagehash xImagetype xSocialprofile xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality xSocialprofile",
+		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSocialprofile xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality xSocialprofile",
 };
 
 export class SettingTab extends PluginSettingTab {
