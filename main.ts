@@ -30,6 +30,7 @@ type Properties = {
 const deletedFolder = "Deleted";
 const iCloudVCardPropertieName = "iCloudVCard";
 const errorsFileName = "Errors";
+const pluginName = "iCloud Contacts";
 
 export default class ICloudContacts extends Plugin {
 	settings: ICloudContactsSettings;
@@ -54,6 +55,10 @@ export default class ICloudContacts extends Plugin {
 			callback: () => this.updateContacts({ rewriteAll: true }),
 		});
 
+		this.addRibbonIcon("sync", "Update Contacts", () =>
+			this.updateContacts(),
+		);
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SettingTab(this.app, this));
 	}
@@ -74,6 +79,10 @@ export default class ICloudContacts extends Plugin {
 
 	async updateContacts(options = { rewriteAll: false }) {
 		try {
+			const startMessage = new Notice(
+				`${pluginName}: Updating contacts...`,
+				0,
+			);
 			this.validateSettings();
 			await this.getCreateFolder(this.settings.folder);
 			const iCloudVCards = await fetchContacts(
@@ -91,6 +100,7 @@ export default class ICloudContacts extends Plugin {
 
 			await this.moveDeletedContacts(existingContacts, iCloudVCards);
 
+			startMessage.hide();
 			this.reportHappenings();
 		} catch (e) {
 			console.error(e);
@@ -145,7 +155,7 @@ export default class ICloudContacts extends Plugin {
 	}
 
 	private reportHappenings() {
-		let noticeText = "";
+		let noticeText = pluginName + ":\n";
 		if (this.newContacts.length > 0)
 			noticeText += `Created ${this.newContacts.length}\n`;
 		if (this.modifiedContacts.length > 0)
@@ -154,8 +164,8 @@ export default class ICloudContacts extends Plugin {
 			noticeText += `Deleted ${this.deletedContacts.length}\n`;
 		if (this.skippedContacts.length > 0)
 			noticeText += `Skipped ${this.skippedContacts.length}\n`;
-		new Notice(noticeText);
-		console.log({
+		new Notice(noticeText, 7000);
+		console.log(pluginName, {
 			newContacts: this.newContacts,
 			modifiedContacts: this.modifiedContacts,
 			deletedContacts: this.deletedContacts,
