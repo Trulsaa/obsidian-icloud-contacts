@@ -9,7 +9,7 @@ import {
 import { createFrontmatter } from "src/frontMatter";
 import { fetchContacts } from "src/iCloudClient";
 import { parseVCard, getFullName } from "src/parser";
-import { VCards } from "src/ParsedVCard";
+import { VCards } from "src/VCards";
 import {
 	DEFAULT_SETTINGS,
 	ICloudContactsSettings,
@@ -260,7 +260,9 @@ export default class ICloudContacts extends Plugin {
 		const fileName = `${fullName}.md`;
 		const filePath = this.settings.folder + "/" + fileName;
 		const content = contactHeader + existingContact.body;
-		const contactFile = this.app.vault.getAbstractFileByPath(filePath);
+		const contactFile = this.app.vault.getAbstractFileByPath(
+			filePath.replace(/\\/g, ""),
+		);
 		if (contactFile instanceof TFile) {
 			this.app.vault.modify(contactFile, content);
 		}
@@ -281,7 +283,10 @@ export default class ICloudContacts extends Plugin {
 			this.settings,
 		);
 		const filePath = `${this.settings.folder}/${fullName}.md`;
-		const newFile = await this.app.vault.create(filePath, `# ${fullName}`);
+		const newFile = await this.app.vault.create(
+			filePath.replace(/\\/g, ""),
+			`# ${fullName}`,
+		);
 		await this.app.fileManager.processFrontMatter(newFile, (fm) => {
 			for (const [key, value] of Object.entries(frontMatter)) {
 				fm[key] = value;
@@ -320,7 +325,9 @@ export default class ICloudContacts extends Plugin {
 	}
 
 	private async getContactProperties(filePath: string) {
-		const contactFile = this.app.vault.getAbstractFileByPath(filePath);
+		const contactFile = this.app.vault.getAbstractFileByPath(
+			filePath.replace(/\\/g, ""),
+		);
 
 		if (contactFile instanceof TFile) {
 			const content = await this.app.vault.read(contactFile);
