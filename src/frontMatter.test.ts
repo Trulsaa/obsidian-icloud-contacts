@@ -653,6 +653,39 @@ const testCases = [
 			relatedLabels: false,
 		},
 	],
+	[
+		"Should parse date",
+		[
+			{
+				key: "xAbdate",
+				meta: { group: "item11", type: "pref" },
+				type: "text",
+				value: "1604-04-01",
+			},
+			{
+				key: "xAbdate",
+				meta: { group: "item12" },
+				type: "text",
+				value: "1604-02-20",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item11" },
+				type: "text",
+				value: "_$!<Anniversary>!$_",
+			},
+		],
+		{
+			date: ["Anniversary: 1604-04-01", "1604-02-20"],
+			name: "Full Name",
+		},
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
+	],
 	/* [
 		"Should parse all",
 		[
@@ -669,18 +702,6 @@ const testCases = [
 				value: "prefix Test middlename Nordmann suffix",
 			},
 			{
-				key: "xAbLabel",
-				meta: { group: "item11" },
-				type: "text",
-				value: "_$!<Anniversary>!$_",
-			},
-			{
-				key: "xAbLabel",
-				meta: { group: "item12" },
-				type: "text",
-				value: "_$!<Other>!$_",
-			},
-			{
 				key: "photo",
 				meta: {
 					xAbcropRectangle:
@@ -689,18 +710,6 @@ const testCases = [
 				},
 				type: "uri",
 				value: "https://gateway.icloud.com/contacts/144375197/ck/card/2bb779a484d34806a91eb34189995544",
-			},
-			{
-				key: "xAbdate",
-				meta: { group: "item11", type: "pref" },
-				type: "text",
-				value: "1604-04-01",
-			},
-			{
-				key: "xAbdate",
-				meta: { group: "item12" },
-				type: "text",
-				value: "1604-02-20",
 			},
 			{
 				key: "rev",

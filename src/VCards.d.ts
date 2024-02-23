@@ -101,7 +101,7 @@ export type VCards =
 	  }
 	| {
 			key: "xAbdate";
-			meta: { group: string; type?: "pref" };
+			meta: { group?: string; type?: "pref" };
 			type: "text";
 			value: string;
 	  };

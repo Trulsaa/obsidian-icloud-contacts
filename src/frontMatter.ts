@@ -69,6 +69,12 @@ export function createFrontmatter(
 					}${stripSocialValue(value)}`,
 					o,
 				);
+			if (key === "xAbdate")
+				return addValueToArray(
+					"date",
+					label ? `${label}: ${value}` : value,
+					o,
+				);
 
 			if (key === "bday") return { ...o, birthday: value };
 			return { ...o, [key]: value };
