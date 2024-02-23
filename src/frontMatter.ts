@@ -1,7 +1,7 @@
-import { ParsedVCard } from "./parser";
+import { VCards } from "./VCards";
 
 export function createFrontmatter(
-	parsedVCards: ParsedVCard[],
+	parsedVCards: VCards[],
 	unShowedKeys: string[],
 	fullName: string,
 	{
@@ -37,7 +37,7 @@ export function createFrontmatter(
 					emailLabels && label ? `${label}: ${value}` : value,
 					o,
 				);
-			if (key === "adr") return addAddresses(value as string[], o);
+			if (key === "adr") return addAddresses(value, o);
 			if (key === "url")
 				return addValueToArray(
 					"url",
@@ -48,11 +48,20 @@ export function createFrontmatter(
 				return addValueToArray(
 					"related names",
 					wrapInBrackets(
-						value as string,
+						value,
 						relatedLabels && label ? label : undefined,
 					),
 					o,
 				);
+			if (key === "impp") {
+				return addValueToArray(
+					"Instant Message",
+					`${meta.xServiceType}: ${value
+						.replace("xmpp:", "")
+						.replace("x-apple:", "")}`,
+					o,
+				);
+			}
 			if (key === "bday") return { ...o, birthday: value };
 			return { ...o, [key]: value };
 		},
@@ -119,7 +128,7 @@ function addOrganizationAndDepartement(
 
 function getLabel(
 	parsedVCardMeta: { [key: string]: string | string[] },
-	parsedVCards: ParsedVCard[],
+	parsedVCards: VCards[],
 ): string | undefined {
 	if (
 		!parsedVCardMeta.group &&
@@ -132,7 +141,7 @@ function getLabel(
 	if (parsedVCardMeta.group) {
 		const xAbLabel = parsedVCards.find(
 			({ key, meta }) =>
-				meta.group === parsedVCardMeta.group && key === "xAbLabel",
+				key === "xAbLabel" && meta.group === parsedVCardMeta.group,
 		);
 		if (!xAbLabel) return;
 		const value = xAbLabel.value as string;

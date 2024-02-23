@@ -1,5 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
-import { getFullName, ParsedVCard, parseVCard } from "./parser";
+import { getFullName, parseVCard } from "./parser";
+import { VCards } from "./VCards";
 
 function padVCard(vCardString: string) {
 	return `BEGIN:VCARD\r\nVERSION:3.0\r\n${vCardString}\r\nEND:VCARD`;
@@ -495,7 +496,7 @@ describe("parser", () => {
 	describe("parseVCard", () => {
 		test.each(parseVCardTestCases)(
 			"Should parse %s",
-			(vCardString: string, expected: ParsedVCard[]) => {
+			(vCardString: string, expected: VCards[]) => {
 				expect(parseVCard(padVCard(vCardString))).toEqual([
 					{ key: "version", meta: {}, type: "text", value: "3.0" },
 					...expected,

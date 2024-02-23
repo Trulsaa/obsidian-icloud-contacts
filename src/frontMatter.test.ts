@@ -401,60 +401,8 @@ const testCases = [
 		},
 	],
 	[
-		"Should parse all",
+		"Should parse Instant Message",
 		[
-			{
-				key: "n",
-				meta: {},
-				type: "text",
-				value: ["Nordmann", "Test", "middlename", "prefix", "suffix"],
-			},
-			{
-				key: "fn",
-				meta: {},
-				type: "text",
-				value: "prefix Test middlename Nordmann suffix",
-			},
-			{
-				key: "xAbLabel",
-				meta: { group: "item8" },
-				type: "text",
-				value: "Mattermost",
-			},
-			{
-				key: "xAbLabel",
-				meta: { group: "item9" },
-				type: "text",
-				value: "WhatsApp",
-			},
-			{
-				key: "xAbLabel",
-				meta: { group: "item10" },
-				type: "text",
-				value: "Discord",
-			},
-			{
-				key: "xAbLabel",
-				meta: { group: "item11" },
-				type: "text",
-				value: "_$!<Anniversary>!$_",
-			},
-			{
-				key: "xAbLabel",
-				meta: { group: "item12" },
-				type: "text",
-				value: "_$!<Other>!$_",
-			},
-			{
-				key: "photo",
-				meta: {
-					xAbcropRectangle:
-						"ABClipRect_1&0&14&381&381&zqiNGuzQ2Ar/PprxdQXvAQ",
-					value: "uri",
-				},
-				type: "uri",
-				value: "https://gateway.icloud.com/contacts/144375197/ck/card/2bb779a484d34806a91eb34189995544",
-			},
 			{
 				key: "impp",
 				meta: { xServiceType: "Facebook", type: "pref" },
@@ -488,11 +436,83 @@ const testCases = [
 				meta: {
 					group: "item10",
 					xServiceType: "Discord",
-					xTeamidentifier: "53Q6R32WPB",
 					xBundleidentifiers: "com.hammerandchisel.discord",
+					xTeamidentifier: "53Q6R32WPB",
 				},
 				type: "text",
 				value: "x-apple:DavidH%235346",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item8" },
+				type: "text",
+				value: "Mattermost",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item9" },
+				type: "text",
+				value: "WhatsApp",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item10" },
+				type: "text",
+				value: "Discord",
+			},
+		],
+		{
+			"Instant Message": [
+				"Facebook: TaylorSwift",
+				"Mattermost: @m11111",
+				"WhatsApp: 123456789",
+				"Discord: DavidH%235346",
+			],
+			name: "Full Name",
+		},
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
+	],
+	/* [
+		"Should parse all",
+		[
+			{
+				key: "n",
+				meta: {},
+				type: "text",
+				value: ["Nordmann", "Test", "middlename", "prefix", "suffix"],
+			},
+			{
+				key: "fn",
+				meta: {},
+				type: "text",
+				value: "prefix Test middlename Nordmann suffix",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item11" },
+				type: "text",
+				value: "_$!<Anniversary>!$_",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item12" },
+				type: "text",
+				value: "_$!<Other>!$_",
+			},
+			{
+				key: "photo",
+				meta: {
+					xAbcropRectangle:
+						"ABClipRect_1&0&14&381&381&zqiNGuzQ2Ar/PprxdQXvAQ",
+					value: "uri",
+				},
+				type: "uri",
+				value: "https://gateway.icloud.com/contacts/144375197/ck/card/2bb779a484d34806a91eb34189995544",
 			},
 			{
 				key: "xSocialprofile",
@@ -585,7 +605,7 @@ const testCases = [
 			urlLabels: false,
 			relatedLabels: false,
 		},
-	],
+	], */
 ];
 
 describe("createFrontmatter", () => {

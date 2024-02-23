@@ -8,7 +8,8 @@ import {
 } from "obsidian";
 import { createFrontmatter } from "src/frontMatter";
 import { fetchContacts } from "src/iCloudClient";
-import { parseVCard, getFullName, ParsedVCard } from "src/parser";
+import { parseVCard, getFullName } from "src/parser";
+import { VCards } from "src/ParsedVCard";
 import {
 	DEFAULT_SETTINGS,
 	ICloudContactsSettings,
@@ -274,7 +275,7 @@ export default class ICloudContacts extends Plugin {
 		const parsedVCards = parseVCard(iCloudVCard.data);
 		const fullName = getFullName(iCloudVCard.data);
 		const frontMatter = createFrontmatter(
-			parsedVCards,
+			parsedVCards as VCards[],
 			unShowedKeys,
 			fullName,
 			this.settings,
@@ -369,7 +370,7 @@ export default class ICloudContacts extends Plugin {
 		const parsedVCards = parseVCard(iCloudVCard.data);
 		const fullName = getFullName(iCloudVCard.data);
 		const contact = createFrontmatter(
-			parsedVCards,
+			parsedVCards as VCards[],
 			unShowedKeys,
 			fullName,
 			this.settings,
