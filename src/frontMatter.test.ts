@@ -12,7 +12,29 @@ const testCases = [
 			},
 		],
 		{ telephone: ["+18003310500"], name: "Full Name" },
-		{ addLabels: true },
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
+	],
+	[
+		"Should parse telephone numbers with labels",
+		[
+			{
+				key: "tel",
+				value: "+18003310500",
+				meta: { type: "pref" },
+			},
+		],
+		{ telephone: ["+18003310500"], name: "Full Name" },
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
 	],
 	[
 		"Should parse org",
@@ -29,7 +51,12 @@ const testCases = [
 			departement: "departement",
 			name: "Full Name",
 		},
-		{ addLabels: true },
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
 	],
 	[
 		"Should parse birthday",
@@ -42,19 +69,34 @@ const testCases = [
 			},
 		],
 		{ birthday: "1604-03-03", name: "Full Name" },
-		{ addLabels: true },
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
 	],
 	[
 		"Should parse nickname",
 		[{ key: "nickname", meta: {}, type: "text", value: "nickname" }],
 		{ name: "Full Name", nickname: "nickname" },
-		{ addLabels: true },
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
 	],
 	[
 		"Should parse note",
 		[{ key: "note", meta: {}, type: "text", value: "A lot og notes" }],
 		{ name: "Full Name", note: "A lot og notes" },
-		{ addLabels: true },
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
 	],
 	[
 		"Should parse telephone withouth labels",
@@ -88,10 +130,15 @@ const testCases = [
 			telephone: ["12345678", "87654321", "00 000003"],
 			name: "Full Name",
 		},
-		{ addLabels: false },
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
 	],
 	[
-		"Should parse telephone",
+		"Should parse telephone with labels",
 		[
 			{
 				key: "tel",
@@ -121,12 +168,17 @@ const testCases = [
 		{
 			telephone: [
 				"12345678",
-				"iphone: 87654321",
-				"APPLE WATCH: 00 000003",
+				"iPhone: 87654321",
+				"Apple watch: 00 000003",
 			],
 			name: "Full Name",
 		},
-		{ addLabels: true },
+		{
+			telLabels: true,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
 	],
 	[
 		"Should parse email",
@@ -170,14 +222,19 @@ const testCases = [
 		],
 		{
 			email: [
-				"home: home@e.mail",
-				"work: work@e.mail",
+				"Home: home@e.mail",
+				"Work: work@e.mail",
 				"School: school@e.mail",
 				"Other: other@e.mail",
 			],
 			name: "Full Name",
 		},
-		{ addLabels: true },
+		{
+			telLabels: false,
+			emailLabels: true,
+			urlLabels: false,
+			relatedLabels: false,
+		},
 	],
 	[
 		"Should parse addresses",
@@ -222,7 +279,12 @@ const testCases = [
 			],
 			name: "Full Name",
 		},
-		{ addLabels: true },
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
 	],
 	[
 		"Should parse url",
@@ -247,12 +309,98 @@ const testCases = [
 			},
 		],
 		{
-			url: ["HomePage: http://hompageurl.com", "example.com"],
+			url: ["Homepage: http://hompageurl.com", "Home: example.com"],
 			name: "Full Name",
 		},
-		{ addLabels: true },
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: true,
+			relatedLabels: false,
+		},
 	],
-	/* [
+	[
+		"Should parse related names",
+		[
+			{
+				key: "xAbrelatednames",
+				meta: { group: "item13", type: "pref" },
+				type: "text",
+				value: "Test Nordmann",
+			},
+			{
+				key: "xAbrelatednames",
+				meta: { group: "item14" },
+				type: "text",
+				value: "Test Nordmann",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item13" },
+				type: "text",
+				value: "_$!<Mother>!$_",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item14" },
+				type: "text",
+				value: "_$!<Child>!$_",
+			},
+		],
+		{
+			"related names": [
+				"[[Test Nordmann|Mother: Test Nordmann]]",
+				"[[Test Nordmann|Child: Test Nordmann]]",
+			],
+			name: "Full Name",
+		},
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: true,
+		},
+	],
+	[
+		"Should parse related names",
+		[
+			{
+				key: "xAbrelatednames",
+				meta: { group: "item13", type: "pref" },
+				type: "text",
+				value: "Test Nordmann",
+			},
+			{
+				key: "xAbrelatednames",
+				meta: { group: "item14" },
+				type: "text",
+				value: "Test Nordmann",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item13" },
+				type: "text",
+				value: "_$!<Mother>!$_",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item14" },
+				type: "text",
+				value: "_$!<Child>!$_",
+			},
+		],
+		{
+			"related names": ["[[Test Nordmann]]", "[[Test Nordmann]]"],
+			name: "Full Name",
+		},
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
+	],
+	[
 		"Should parse all",
 		[
 			{
@@ -296,18 +444,6 @@ const testCases = [
 				meta: { group: "item12" },
 				type: "text",
 				value: "_$!<Other>!$_",
-			},
-			{
-				key: "xAbLabel",
-				meta: { group: "item13" },
-				type: "text",
-				value: "_$!<Mother>!$_",
-			},
-			{
-				key: "xAbLabel",
-				meta: { group: "item14" },
-				type: "text",
-				value: "_$!<Child>!$_",
 			},
 			{
 				key: "photo",
@@ -422,18 +558,6 @@ const testCases = [
 				value: "1604-02-20",
 			},
 			{
-				key: "xAbrelatednames",
-				meta: { group: "item13", type: "pref" },
-				type: "text",
-				value: "Test Nordmann",
-			},
-			{
-				key: "xAbrelatednames",
-				meta: { group: "item14" },
-				type: "text",
-				value: "Test Nordmann",
-			},
-			{
 				key: "rev",
 				meta: {},
 				type: "text",
@@ -455,8 +579,13 @@ const testCases = [
 		{
 			name: "Full Name",
 		},
-		{ addLabels: true },
-	], */
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
+	],
 ];
 
 describe("createFrontmatter", () => {
@@ -467,7 +596,12 @@ describe("createFrontmatter", () => {
 				_testLabel: string,
 				parsedVCard: any,
 				expected: any,
-				settings: { addLabels: boolean },
+				settings: {
+					telLabels: boolean;
+					emailLabels: boolean;
+					urlLabels: boolean;
+					relatedLabels: boolean;
+				},
 			) => {
 				expect(
 					createFrontmatter(

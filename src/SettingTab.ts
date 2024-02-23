@@ -5,7 +5,10 @@ export interface ICloudContactsSettings {
 	username: string;
 	password: string;
 	folder: string;
-	addLabels: boolean;
+	telLabels: boolean;
+	emailLabels: boolean;
+	urlLabels: boolean;
+	relatedLabels: boolean;
 	excludeKeys: string;
 }
 
@@ -13,7 +16,10 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	username: "",
 	password: "",
 	folder: "Contacts",
-	addLabels: false,
+	telLabels: false,
+	emailLabels: false,
+	urlLabels: false,
+	relatedLabels: false,
 	excludeKeys:
 		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSocialprofile xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality xSocialprofile",
 };
@@ -95,14 +101,53 @@ export class SettingTab extends PluginSettingTab {
 					}),
 			);
 
+		containerEl.createEl("br");
+		containerEl.createEl("h3", { text: "Parameters" });
+		containerEl.createEl("p", {
+			text: "Make sure to run the 'Update all Contacts' function if you want changes to any of the below settings to take affect on existing contacts. Otherwise they will only apply to new and updated contacts after running 'Update Contacts'",
+			cls: "setting-item-description",
+		});
+
 		new Setting(containerEl)
-			.setName("Add labels")
-			.setDesc("Add labels to telephone numbers and emails. Make sure to run the 'Update all Contacts' function if you want labels on existing contacts. Otherwise labels will only apply to new and updated contacts after running 'Update Contacts'")
+			.setName("Add labels to telephone numbers")
 			.addToggle((bool) =>
 				bool
-					.setValue(this.plugin.settings.addLabels)
+					.setValue(this.plugin.settings.telLabels)
 					.onChange(async (value) => {
-						this.plugin.settings.addLabels = value;
+						this.plugin.settings.telLabels = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Add labels to emails")
+			.addToggle((bool) =>
+				bool
+					.setValue(this.plugin.settings.emailLabels)
+					.onChange(async (value) => {
+						this.plugin.settings.emailLabels = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Add labels to urls")
+			.addToggle((bool) =>
+				bool
+					.setValue(this.plugin.settings.urlLabels)
+					.onChange(async (value) => {
+						this.plugin.settings.urlLabels = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Add labels to related names")
+			.addToggle((bool) =>
+				bool
+					.setValue(this.plugin.settings.relatedLabels)
+					.onChange(async (value) => {
+						this.plugin.settings.relatedLabels = value;
 						await this.plugin.saveSettings();
 					}),
 			);

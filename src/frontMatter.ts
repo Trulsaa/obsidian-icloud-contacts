@@ -4,7 +4,17 @@ export function createFrontmatter(
 	parsedVCards: ParsedVCard[],
 	unShowedKeys: string[],
 	fullName: string,
-	settings: { addLabels: boolean },
+	{
+		telLabels,
+		emailLabels,
+		urlLabels,
+		relatedLabels,
+	}: {
+		telLabels: boolean;
+		emailLabels: boolean;
+		urlLabels: boolean;
+		relatedLabels: boolean;
+	},
 ) {
 	const labels = parsedVCards.filter(({ key }) => key === "xAbLabel");
 	const contact = parsedVCards.reduce(
@@ -13,16 +23,36 @@ export function createFrontmatter(
 			if (key === "fn") return o;
 			if (key === "org") return addOrganizationAndDepartement(value, o);
 
-			const label = settings.addLabels
-				? getLabel(meta, labels)
-				: undefined;
+			const rawLabel = getLabel(meta, labels);
+			const label = rawLabel ? capitalize(rawLabel) : undefined;
 			if (key === "tel")
-				return addValueWithLabelToArray("telephone", value, o, label);
+				return addValueToArray(
+					"telephone",
+					telLabels && label ? `${label}: ${value}` : value,
+					o,
+				);
 			if (key === "email")
-				return addValueWithLabelToArray("email", value, o, label);
+				return addValueToArray(
+					"email",
+					emailLabels && label ? `${label}: ${value}` : value,
+					o,
+				);
 			if (key === "adr") return addAddresses(value as string[], o);
 			if (key === "url")
-				return addValueWithLabelToArray("url", value, o, label);
+				return addValueToArray(
+					"url",
+					urlLabels && label ? `${label}: ${value}` : value,
+					o,
+				);
+			if (key === "xAbrelatednames")
+				return addValueToArray(
+					"related names",
+					wrapInBrackets(
+						value as string,
+						relatedLabels && label ? label : undefined,
+					),
+					o,
+				);
 			if (key === "bday") return { ...o, birthday: value };
 			return { ...o, [key]: value };
 		},
@@ -44,19 +74,20 @@ function addAddresses(
 	};
 }
 
-function addValueWithLabelToArray(
+function wrapInBrackets(value: string, label?: string) {
+	return label ? `[[${value}|${label}: ${value}]]` : `[[${value}]]`;
+}
+
+function addValueToArray(
 	key: string,
 	value: string[] | string,
 	o: { [key: string]: string[] | string | undefined },
-	label?: string,
 ) {
-	const valueWithOptionalLabel = label ? `${label}: ${value}` : value;
-	if (Array.isArray(o[key]))
-		return { ...o, [key]: [...o[key]!, valueWithOptionalLabel] };
+	if (Array.isArray(o[key])) return { ...o, [key]: [...o[key]!, value] };
 
 	return {
 		...o,
-		[key]: [valueWithOptionalLabel],
+		[key]: [value],
 	};
 }
 
@@ -90,7 +121,11 @@ function getLabel(
 	parsedVCardMeta: { [key: string]: string | string[] },
 	parsedVCards: ParsedVCard[],
 ): string | undefined {
-	if (!parsedVCardMeta.group && !Array.isArray(parsedVCardMeta.type)) {
+	if (
+		!parsedVCardMeta.group &&
+		!Array.isArray(parsedVCardMeta.type) &&
+		!parsedVCardMeta.type
+	) {
 		return;
 	}
 
@@ -104,8 +139,15 @@ function getLabel(
 		return value.replace("_$!<", "").replace(">!$_", "");
 	}
 
-	const type = parsedVCardMeta.type as string[];
-	return type.find(
-		(t) => ["cell", "voice", "pref", "internet"].indexOf(t) === -1,
-	);
+	const type = parsedVCardMeta.type;
+	if (Array.isArray(type))
+		return type.find(
+			(t) => ["cell", "voice", "pref", "internet"].indexOf(t) === -1,
+		);
+	return type;
+}
+
+function capitalize(str: string) {
+	if (str === "iphone") return "iPhone";
+	return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
