@@ -462,7 +462,7 @@ const testCases = [
 			},
 		],
 		{
-			"Instant Message": [
+			"instant message": [
 				"Facebook: TaylorSwift",
 				"Mattermost: @m11111",
 				"WhatsApp: 123456789",
@@ -477,43 +477,112 @@ const testCases = [
 			relatedLabels: false,
 		},
 	],
-	/* [
-		"Should parse all",
+	[
+		"Should parse Instant Message",
 		[
 			{
-				key: "n",
-				meta: {},
+				key: "impp",
+				meta: { xServiceType: "Facebook", type: ["pref", "home"] },
 				type: "text",
-				value: ["Nordmann", "Test", "middlename", "prefix", "suffix"],
+				value: "xmpp:TaylorSwift",
 			},
 			{
-				key: "fn",
-				meta: {},
+				key: "impp",
+				meta: { xServiceType: "Mattermost", type: "work" },
 				type: "text",
-				value: "prefix Test middlename Nordmann suffix",
+				value: "x-apple:@m11111",
 			},
 			{
-				key: "xAbLabel",
-				meta: { group: "item11" },
+				key: "impp",
+				meta: { xServiceType: "WhatsApp", type: "home" },
 				type: "text",
-				value: "_$!<Anniversary>!$_",
+				value: "x-apple:123456789",
 			},
 			{
-				key: "xAbLabel",
-				meta: { group: "item12" },
+				key: "impp",
+				meta: { xServiceType: "Discord", type: "work" },
 				type: "text",
-				value: "_$!<Other>!$_",
+				value: "x-apple:DavidH%235346",
+			},
+		],
+		{
+			"instant message": [
+				"Facebook: TaylorSwift",
+				"Mattermost: @m11111",
+				"WhatsApp: 123456789",
+				"Discord: DavidH%235346",
+			],
+			name: "Full Name",
+		},
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
+	],
+	[
+		"Should parse social profiles",
+		[
+			{
+				key: "xSocialprofile",
+				meta: { type: "twitter" },
+				type: "text",
+				value: "https://twitter.com/elonmusk",
 			},
 			{
-				key: "photo",
+				key: "xSocialprofile",
+				meta: { type: "facebook" },
+				type: "text",
+				value: "https://www.facebook.com/TaylorSwift",
+			},
+			{
+				key: "xSocialprofile",
+				meta: { type: "linkedin" },
+				type: "text",
+				value: "https://www.linkedin.com/in/williamhgates",
+			},
+			{
+				key: "xSocialprofile",
 				meta: {
-					xAbcropRectangle:
-						"ABClipRect_1&0&14&381&381&zqiNGuzQ2Ar/PprxdQXvAQ",
-					value: "uri",
+					type: "snapchat",
+					xBundleidentifiers: "com.toyopagroup.picaboo",
+					xTeamidentifier: "424M5254LK",
 				},
-				type: "uri",
-				value: "https://gateway.icloud.com/contacts/144375197/ck/card/2bb779a484d34806a91eb34189995544",
+				type: "text",
+				value: "x-apple:NBA",
 			},
+			{
+				key: "xSocialprofile",
+				meta: {
+					type: "github",
+					xBundleidentifiers: "com.github.stormbreaker.prod",
+					xTeamidentifier: "VEKTX9H2N7",
+				},
+				type: "text",
+				value: "x-apple:robpike",
+			},
+		],
+		{
+			"social profile": [
+				"Twitter: https://twitter.com/elonmusk",
+				"Facebook: https://www.facebook.com/TaylorSwift",
+				"Linkedin: https://www.linkedin.com/in/williamhgates",
+				"Snapchat: NBA",
+				"Github: robpike",
+			],
+			name: "Full Name",
+		},
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
+	],
+	[
+		"Should parse social profiles",
+		[
 			{
 				key: "xSocialprofile",
 				meta: { type: "twitter", xUser: "elonmusk" },
@@ -564,6 +633,62 @@ const testCases = [
 				},
 				type: "text",
 				value: "x-apple:robpike",
+			},
+		],
+		{
+			"social profile": [
+				"Twitter: https://twitter.com/elonmusk",
+				"Facebook: https://www.facebook.com/TaylorSwift",
+				"Linkedin: https://www.linkedin.com/in/williamhgates",
+				"X: elonmusk",
+				"Snapchat: NBA",
+				"Github: robpike",
+			],
+			name: "Full Name",
+		},
+		{
+			telLabels: false,
+			emailLabels: false,
+			urlLabels: false,
+			relatedLabels: false,
+		},
+	],
+	/* [
+		"Should parse all",
+		[
+			{
+				key: "n",
+				meta: {},
+				type: "text",
+				value: ["Nordmann", "Test", "middlename", "prefix", "suffix"],
+			},
+			{
+				key: "fn",
+				meta: {},
+				type: "text",
+				value: "prefix Test middlename Nordmann suffix",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item11" },
+				type: "text",
+				value: "_$!<Anniversary>!$_",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item12" },
+				type: "text",
+				value: "_$!<Other>!$_",
+			},
+			{
+				key: "photo",
+				meta: {
+					xAbcropRectangle:
+						"ABClipRect_1&0&14&381&381&zqiNGuzQ2Ar/PprxdQXvAQ",
+					value: "uri",
+				},
+				type: "uri",
+				value: "https://gateway.icloud.com/contacts/144375197/ck/card/2bb779a484d34806a91eb34189995544",
 			},
 			{
 				key: "xAbdate",
@@ -626,7 +751,7 @@ describe("createFrontmatter", () => {
 				expect(
 					createFrontmatter(
 						parsedVCard,
-						"n photo prodid rev uid version xAbadr xAbLabel xAbShowAs xImagehash xImagetype xSocialprofile xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality xSocialprofile".split(
+						"n photo prodid rev uid version xAbadr xAbLabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality".split(
 							/\s+/,
 						),
 						"Full Name",

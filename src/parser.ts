@@ -11,7 +11,7 @@ export function parseVCard(vcardString: string): ParsedVCard[] {
 	const jCard = vcfParse(vcardString)[0].toJSON();
 	// console.log("jCard: ", JSON.stringify(jCard[1].slice(1), null, 2));
 
-	return jCard[1].map((item) => {
+	const result = jCard[1].map((item) => {
 		const key = item[0];
 		let value = item[3];
 		if (key === "org") value = (item[3] as string).split(";");
@@ -22,6 +22,7 @@ export function parseVCard(vcardString: string): ParsedVCard[] {
 			value,
 		};
 	});
+	return result
 }
 
 export function getFullName(vCardString: string): string {

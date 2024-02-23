@@ -53,21 +53,38 @@ export function createFrontmatter(
 					),
 					o,
 				);
-			if (key === "impp") {
+			if (key === "impp")
 				return addValueToArray(
-					"Instant Message",
+					"instant message",
 					`${meta.xServiceType}: ${value
 						.replace("xmpp:", "")
 						.replace("x-apple:", "")}`,
 					o,
 				);
-			}
+			if (key === "xSocialprofile")
+				return addValueToArray(
+					"social profile",
+					`${
+						meta.type ? `${capitalize(meta.type)}: ` : ""
+					}${stripSocialValue(value)}`,
+					o,
+				);
+
 			if (key === "bday") return { ...o, birthday: value };
 			return { ...o, [key]: value };
 		},
 		{ name: fullName },
 	);
 	return contact;
+}
+
+function stripSocialValue(value: string) {
+	const toRemove = ["x-apple:", "xmpp:"];
+	// romove all of the above from value
+	return toRemove.reduce(
+		(value, searchValue) => value.replace(searchValue, ""),
+		value,
+	);
 }
 
 function addAddresses(

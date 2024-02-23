@@ -15,7 +15,7 @@ export type VCards =
 			key: "impp";
 			meta: {
 				group: string;
-				type?: "pref";
+				type?: string[];
 				xServiceType: string;
 				xTeamidentifier: string;
 				xBundleidentifiers: string;
@@ -91,8 +91,8 @@ export type VCards =
 	| {
 			key: "xSocialprofile";
 			meta: {
-				type: string;
-				xUser: string;
+				type?: string;
+				xUser?: string;
 				xTeamidentifier?: string;
 				xBundleidentifiers?: string;
 			};
