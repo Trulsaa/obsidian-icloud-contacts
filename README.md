@@ -1,12 +1,24 @@
 # Obsidian iCloud contacts
 
-This plugin provides functions to sync contacts from your iCloud account to a folder in your vault.
+<p align="center">
+	<img src="https://img.shields.io/github/manifest-json/v/Trulsaa/obsidian-icloud-contacts?color=blue">
+    <img src="https://img.shields.io/github/release-date/Trulsaa/obsidian-icloud-contacts">
+	<img src="https://img.shields.io/github/license/Trulsaa/obsidian-icloud-contacts">
+	<img src="https://img.shields.io/github/downloads/Trulsaa/obsidian-icloud-contacts/total">
+	<img src="https://img.shields.io/github/issues/Trulsaa/obsidian-icloud-contacts">
+</p>
+
+<p align="center">
+This plugin provides functions to sync contacts from your iCloud account to a folder in your vault. A contact file will look something like this.
+</p>
+
+![Example contact file](images/example_contact_file.png)
 
 ## Features
 
 -   Sync contacts from your iCloud to Obsidian
--   Creates a file for each contact with propperties corresponding to contact details.
--   This plugin only updates the propperties, the title and the top H1 header (the name). Any further info written in the files will not be touched when updating the contact.
+-   Creates a file for each contact with properties corresponding to contact details.
+-   This plugin only updates the properties, the title and the top H1 header (the name). Any further info written in the files will not be touched when updating the contact.
 
 ## How to use
 
@@ -19,17 +31,17 @@ This plugin provides functions to sync contacts from your iCloud account to a fo
 
 This plugin provides two commands. Use the command pallet to search for **Obsidian iCloud contacts** and use one of the two commands to update your contacts folder.
 
-1. **Update Contacts**: Downloads alle contacts from iCloud and updates the contacts files in you vault that based what contacts have been updated in iCloud.
-2. **Update all Contacts**: - Downloads alle contacts form iCloud and rewrites alle contacts files in your vault based on the contacts from iCloud. Usefull for when you have changed the Excluded keys setting.
+1. **Update Contacts**: Downloads all contacts from iCloud and updates the contacts files in you vault that based what contacts have been updated in iCloud.
+2. **Update all Contacts**: - Downloads alle contacts form iCloud and rewrites all contacts files in your vault based on the contacts from iCloud. Usefull for when you have changed the Excluded keys setting.
 
 ## Notes
 
--   The **iCloudVCard** propperty needs is used to only update contacts that have been changed. I also like it as a backup of my contacts in my vault.
+-   The **iCloudVCard** property is used to update contacts that have been changed. I also like it as a backup of my contacts in my vault.
 -   This plugin is not affiliated with Apple in any way.
 
 ## Thanks
 
-The IcloudClient in this codebase is copied and addapted from [tsdav](https://github.com/natelindev/tsdav). 
+The IcloudClient in this codebase is copied and adapted from [tsdav](https://github.com/natelindev/tsdav).
 
 ## Support
 
