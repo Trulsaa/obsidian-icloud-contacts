@@ -5,6 +5,7 @@ import {
 	stringifyYaml,
 	TFile,
 	TFolder,
+	normalizePath,
 } from "obsidian";
 import { createFrontmatter } from "src/frontMatter";
 import { fetchContacts } from "src/iCloudClient";
@@ -208,7 +209,9 @@ export default class ICloudContacts extends Plugin {
 
 	private async moveDeletedContact(iCloudVCard: ICloudVCard) {
 		try {
-			const deletedContactFullName = getFullName(iCloudVCard.data);
+			const deletedContactFullName = normalizePath(
+				getFullName(iCloudVCard.data),
+			);
 			await this.renameContactFile(
 				deletedContactFullName,
 				deletedFolder + "/" + deletedContactFullName,
@@ -259,8 +262,10 @@ export default class ICloudContacts extends Plugin {
 				`existingContact.properties[${iCloudVCardPropertieName}].data`,
 			);
 		}
-		const existingContactFullName = getFullName(
-			existingContact.properties[iCloudVCardPropertieName].data,
+		const existingContactFullName = normalizePath(
+			getFullName(
+				existingContact.properties[iCloudVCardPropertieName].data,
+			),
 		);
 		const isFullNameModified =
 			existingContactFullName.replace(/\\/g, "") !== fullName;
@@ -285,7 +290,7 @@ export default class ICloudContacts extends Plugin {
 
 		const unShowedKeys = this.settings.excludeKeys.split(/\s+/);
 		const parsedVCards = parseVCard(iCloudVCard.data);
-		const fullName = getFullName(iCloudVCard.data);
+		const fullName = normalizePath(getFullName(iCloudVCard.data));
 		const frontMatter = createFrontmatter(
 			parsedVCards as VCards[],
 			unShowedKeys,
@@ -358,8 +363,8 @@ export default class ICloudContacts extends Plugin {
 					`properties[${iCloudVCardPropertieName}].data is undefined`,
 				);
 			}
-			const fullName = getFullName(
-				properties[iCloudVCardPropertieName].data,
+			const fullName = normalizePath(
+				getFullName(properties[iCloudVCardPropertieName].data),
 			);
 			const title = `# ${fullName}`;
 			const endOfContactHeader = content.indexOf(title) + title.length;
@@ -385,7 +390,7 @@ export default class ICloudContacts extends Plugin {
 
 		const unShowedKeys = this.settings.excludeKeys.split(/\s+/);
 		const parsedVCards = parseVCard(iCloudVCard.data);
-		const fullName = getFullName(iCloudVCard.data);
+		const fullName = normalizePath(getFullName(iCloudVCard.data));
 		const contact = createFrontmatter(
 			parsedVCards as VCards[],
 			unShowedKeys,
