@@ -27,7 +27,9 @@ This plugin provides functions to sync contacts from your iCloud account to a fo
 3. Run the command `Obsidian iCloud contacts: Update contacts` to sync your contacts
 4. After syncing is complete, you will see a notification stating how many Contacts have been synced.
 
-Now that you have a folder with all your contacts you can for example use the [dataview plugin](https://blacksmithgu.github.io/obsidian-dataview/) to display a table with email and phone number for all the contacts you have referenced in the current file like this.
+Now that you have a folder with all your contacts you can link all your projects to their participants. All your vacation plans to your travel partners. All your meeting notes to the participants. 
+
+In addition, you can for example use the [dataview plugin](https://blacksmithgu.github.io/obsidian-dataview/) to display a table with email and phone number for all the contacts you have referenced in the current file like this.
 
 ````markdown
 ```dataview
@@ -37,7 +39,7 @@ WHERE iCloudVCard
 ```
 ````
 
-Or you can add this to you daily notes template. Given that the title of your daily notes are formatted like YYYY-MM-DD. Then this will create a list of all your contacts who has a birthday on that day.
+And you can add this to you daily notes template. Given that the title of your daily notes are formatted like YYYY-MM-DD. Then this will create a list of all your contacts who has a birthday on that day.
 
 ````markdown
 ```dataview
