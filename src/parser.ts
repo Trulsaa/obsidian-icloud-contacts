@@ -25,25 +25,25 @@ export function parseVCard(vcardString: string): ParsedVCard[] {
 
 export function getFullName(vCardString: string): string {
 	const parsedVCard = parseVCard(vCardString);
+	const fullName = parsedVCard.find(({ key }) => key === "fn");
+	if (fullName && fullName.value) {
+		return (fullName.value as string).replace(/\\/g, "");
+	}
+
 	const isOrg =
 		parsedVCard.find(({ key }) => key === "xAbShowAs")?.value === "COMPANY";
 	if (isOrg) {
 		return (
 			parsedVCard.find(({ key }) => key === "org")?.value as string[]
-		)[0];
-	}
-
-	const fullName = parsedVCard.find(({ key }) => key === "fn");
-	if (fullName && fullName.value) {
-		return fullName.value as string;
+		)[0].replace(/\\/g, "");
 	}
 
 	const name = parsedVCard.find(({ key }) => key === "n");
 	if (!name) throw new Error("Unable to get full name");
-	return convertNameToFullName(name.value as string[]);
+	return convertNameToFullName(name.value as string[]).replace(/\\/g, "");
 }
 
-export function convertNameToFullName([
+function convertNameToFullName([
 	familyName,
 	givenName,
 	additionalMiddleNames,
