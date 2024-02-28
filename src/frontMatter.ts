@@ -2,24 +2,25 @@ import { VCards } from "./VCards";
 
 export function createFrontmatter(
 	parsedVCards: VCards[],
-	unShowedKeys: string[],
 	fullName: string,
 	{
 		telLabels,
 		emailLabels,
 		urlLabels,
 		relatedLabels,
+		excludedKeys,
 	}: {
 		telLabels: boolean;
 		emailLabels: boolean;
 		urlLabels: boolean;
 		relatedLabels: boolean;
+		excludedKeys: string;
 	},
 ) {
 	const labels = parsedVCards.filter(({ key }) => key === "xAbLabel");
 	const contact = parsedVCards.reduce(
 		(o, { key, value, meta }) => {
-			if (unShowedKeys.indexOf(key) > -1) return o;
+			if (excludedKeys.split(/\s+/).indexOf(key) > -1) return o;
 			if (key === "fn") return o;
 			if (key === "org") return addOrganizationAndDepartement(value, o);
 
@@ -81,7 +82,7 @@ export function createFrontmatter(
 		},
 		{ name: fullName },
 	);
-	return contact;
+	return contact as { [key: string]: string | string[] };
 }
 
 function stripSocialValue(value: string) {
@@ -172,11 +173,13 @@ function getLabel(
 	}
 
 	const type = parsedVCardMeta.type;
-	if (Array.isArray(type))
-		return type.find(
-			(t) => ["cell", "voice", "pref", "internet"].indexOf(t) === -1,
-		);
+	if (Array.isArray(type)) return type.find(isLabel);
+	if (!isLabel(type)) return;
 	return type;
+}
+
+function isLabel(label: string) {
+	return ["cell", "voice", "pref", "internet"].indexOf(label) === -1;
 }
 
 function capitalize(str: string) {

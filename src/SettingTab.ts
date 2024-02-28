@@ -9,7 +9,7 @@ export interface ICloudContactsSettings {
 	emailLabels: boolean;
 	urlLabels: boolean;
 	relatedLabels: boolean;
-	excludeKeys: string;
+	excludedKeys: string;
 }
 
 export const DEFAULT_SETTINGS: ICloudContactsSettings = {
@@ -20,7 +20,7 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	emailLabels: false,
 	urlLabels: false,
 	relatedLabels: false,
-	excludeKeys:
+	excludedKeys:
 		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality",
 };
 
@@ -162,9 +162,9 @@ export class SettingTab extends PluginSettingTab {
 					.setPlaceholder(
 						"Add space delimited list of keys to exclude",
 					)
-					.setValue(this.plugin.settings.excludeKeys)
+					.setValue(this.plugin.settings.excludedKeys)
 					.onChange(async (value) => {
-						this.plugin.settings.excludeKeys = value;
+						this.plugin.settings.excludedKeys = value;
 						await this.plugin.saveSettings();
 					}),
 			);

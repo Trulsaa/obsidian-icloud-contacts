@@ -7,15 +7,15 @@ import {
 	TFolder,
 	normalizePath,
 } from "obsidian";
-import { createFrontmatter } from "src/frontMatter";
-import { fetchContacts } from "src/iCloudClient";
-import { parseVCard, getFullName } from "src/parser";
-import { VCards } from "src/VCards";
+import { createFrontmatter } from "./src/frontMatter";
+import { fetchContacts } from "./src/iCloudClient";
+import { parseVCard, getFullName } from "./src/parser";
+import { VCards } from "./src/VCards";
 import {
 	DEFAULT_SETTINGS,
 	ICloudContactsSettings,
 	SettingTab,
-} from "src/SettingTab";
+} from "./src/SettingTab";
 
 type ICloudVCard = {
 	url: string;
@@ -101,6 +101,10 @@ export default class ICloudContacts extends Plugin {
 
 			await this.moveDeletedContacts(existingContacts, iCloudVCards);
 
+			await this.app.vault.adapter.write(
+				".obsidian/plugins/icloud-contacts/lastDownloadedICloudVCards.json",
+				JSON.stringify(iCloudVCards),
+			);
 			startMessage.hide();
 			this.reportHappenings();
 		} catch (e) {
@@ -209,9 +213,7 @@ export default class ICloudContacts extends Plugin {
 
 	private async moveDeletedContact(iCloudVCard: ICloudVCard) {
 		try {
-			const deletedContactFullName = normalizePath(
-				getFullName(iCloudVCard.data),
-			);
+			const deletedContactFullName = getFullName(iCloudVCard.data);
 			await this.renameContactFile(
 				deletedContactFullName,
 				deletedFolder + "/" + deletedContactFullName,
@@ -255,32 +257,77 @@ export default class ICloudContacts extends Plugin {
 			body: string;
 		},
 	) {
-		const { contactHeader, fullName } =
-			this.createContactHeader(iCloudVCard);
+		const newFullName = getFullName(iCloudVCard.data);
 		if (!existingContact.properties[iCloudVCardPropertieName].data) {
 			throw new Error(
-				`existingContact.properties[${iCloudVCardPropertieName}].data`,
+				`existingContact.properties[${iCloudVCardPropertieName}].data is missing`,
 			);
 		}
-		const existingContactFullName = normalizePath(
+		const existingContactFullName = getFullName(
+			existingContact.properties[iCloudVCardPropertieName].data,
+		);
+
+		const contactFile = this.getContactFile(existingContactFullName);
+		if (!contactFile) {
+			throw new Error("contactFile not found");
+		}
+
+		const isFullNameModified = existingContactFullName !== newFullName;
+		if (isFullNameModified) {
+			await this.renameContactFile(existingContactFullName, newFullName);
+			const content = await this.app.vault.process(
+				contactFile,
+				(data) => {
+					return data.replace(
+						`# ${existingContactFullName}`,
+						`# ${newFullName}`,
+					);
+				},
+			);
+		}
+
+		const parsedVCards = parseVCard(iCloudVCard.data);
+		const newFrontMatter = createFrontmatter(
+			parsedVCards as VCards[],
+			newFullName,
+			this.settings,
+		);
+		// TODO: for at man skal være sikker på å kunne generere opp de samme frontmatterene som forrige gang
+		// Så må man ha samme settings som forrige gang. Det en diff på settings kan også brukes til å kjøre update all når settings er endret.
+		const prevFrontMatter = createFrontmatter(
+			parseVCard(
+				existingContact.properties[iCloudVCardPropertieName].data,
+			) as VCards[],
 			getFullName(
 				existingContact.properties[iCloudVCardPropertieName].data,
 			),
+			this.settings,
 		);
-		const isFullNameModified =
-			existingContactFullName.replace(/\\/g, "") !== fullName;
-		if (isFullNameModified) {
-			await this.renameContactFile(existingContactFullName, fullName);
-		}
+
+		await this.app.fileManager.processFrontMatter(
+			contactFile,
+			(fileFrontmatter) => {
+				for (const [key, value] of Object.entries(prevFrontMatter)) {
+					// If the kay exists in prev but not in new delete it
+					if (!newFrontMatter[key]) {
+						delete fileFrontmatter[key];
+					}
+				}
+				for (const [key, value] of Object.entries(newFrontMatter)) {
+					fileFrontmatter[key] = value;
+				}
+				fileFrontmatter[iCloudVCardPropertieName] = iCloudVCard;
+			},
+		);
+	}
+
+	private getContactFile(fullName: string) {
 		const fileName = `${fullName}.md`;
 		const filePath = this.settings.folder + "/" + fileName;
-		const content = contactHeader + existingContact.body;
-		const contactFile = this.app.vault.getAbstractFileByPath(
-			filePath.replace(/\\/g, ""),
+		const contactFile = this.app.vault.getFileByPath(
+			normalizePath(filePath),
 		);
-		if (contactFile instanceof TFile) {
-			this.app.vault.modify(contactFile, content);
-		}
+		return contactFile;
 	}
 
 	private async createContactFile(iCloudVCard: ICloudVCard) {
@@ -288,12 +335,10 @@ export default class ICloudContacts extends Plugin {
 			throw new Error("iCloudVCard.data is undefined");
 		}
 
-		const unShowedKeys = this.settings.excludeKeys.split(/\s+/);
 		const parsedVCards = parseVCard(iCloudVCard.data);
-		const fullName = normalizePath(getFullName(iCloudVCard.data));
+		const fullName = getFullName(iCloudVCard.data);
 		const frontMatter = createFrontmatter(
 			parsedVCards as VCards[],
-			unShowedKeys,
 			fullName,
 			this.settings,
 		);
@@ -314,15 +359,18 @@ export default class ICloudContacts extends Plugin {
 		existingContactFullName: string,
 		fullName: string | string[],
 	) {
-		const contactFile = this.app.vault.getAbstractFileByPath(
+		const existingContactFilePath = normalizePath(
 			this.settings.folder + "/" + existingContactFullName + ".md",
 		);
-		if (contactFile instanceof TFile) {
-			await this.app.fileManager.renameFile(
-				contactFile,
-				this.settings.folder + "/" + fullName + ".md",
-			);
-		}
+		const contactFile = this.app.vault.getFileByPath(
+			existingContactFilePath,
+		);
+		if (!contactFile)
+			throw new Error(existingContactFilePath + " not found");
+		await this.app.fileManager.renameFile(
+			contactFile,
+			normalizePath(this.settings.folder + "/" + fullName + ".md"),
+		);
 	}
 
 	private async getAllCurrentProperties(folder: string) {
@@ -388,12 +436,10 @@ export default class ICloudContacts extends Plugin {
 			throw new Error("iCloudVCard.data is undefined");
 		}
 
-		const unShowedKeys = this.settings.excludeKeys.split(/\s+/);
 		const parsedVCards = parseVCard(iCloudVCard.data);
 		const fullName = normalizePath(getFullName(iCloudVCard.data));
 		const contact = createFrontmatter(
 			parsedVCards as VCards[],
-			unShowedKeys,
 			fullName,
 			this.settings,
 		);

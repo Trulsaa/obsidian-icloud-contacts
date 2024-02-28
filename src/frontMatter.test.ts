@@ -1,6 +1,13 @@
 import { describe, expect, test } from "@jest/globals";
 import { createFrontmatter } from "./frontMatter";
 
+const defaultSettings = {
+	telLabels: false,
+	emailLabels: false,
+	urlLabels: false,
+	relatedLabels: false,
+	excludedKeys: "xAbLabel xAbadr",
+};
 const testCases = [
 	[
 		"Should parse tel",
@@ -12,12 +19,7 @@ const testCases = [
 			},
 		],
 		{ telephone: ["+18003310500"], name: "Full Name" },
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	[
 		"Should parse telephone numbers with labels",
@@ -29,12 +31,7 @@ const testCases = [
 			},
 		],
 		{ telephone: ["+18003310500"], name: "Full Name" },
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	[
 		"Should parse org",
@@ -51,12 +48,7 @@ const testCases = [
 			departement: "departement",
 			name: "Full Name",
 		},
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	[
 		"Should parse birthday",
@@ -69,34 +61,19 @@ const testCases = [
 			},
 		],
 		{ birthday: "1604-03-03", name: "Full Name" },
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	[
 		"Should parse nickname",
 		[{ key: "nickname", meta: {}, type: "text", value: "nickname" }],
 		{ name: "Full Name", nickname: "nickname" },
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	[
 		"Should parse note",
 		[{ key: "note", meta: {}, type: "text", value: "A lot og notes" }],
 		{ name: "Full Name", note: "A lot og notes" },
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	[
 		"Should parse telephone withouth labels",
@@ -130,12 +107,7 @@ const testCases = [
 			telephone: ["12345678", "87654321", "00 000003"],
 			name: "Full Name",
 		},
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	[
 		"Should parse telephone with labels",
@@ -173,11 +145,10 @@ const testCases = [
 			],
 			name: "Full Name",
 		},
+
 		{
+			...defaultSettings,
 			telLabels: true,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
 		},
 	],
 	[
@@ -230,10 +201,8 @@ const testCases = [
 			name: "Full Name",
 		},
 		{
-			telLabels: false,
+			...defaultSettings,
 			emailLabels: true,
-			urlLabels: false,
-			relatedLabels: false,
 		},
 	],
 	[
@@ -279,12 +248,7 @@ const testCases = [
 			],
 			name: "Full Name",
 		},
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	[
 		"Should parse url",
@@ -313,10 +277,8 @@ const testCases = [
 			name: "Full Name",
 		},
 		{
-			telLabels: false,
-			emailLabels: false,
+			...defaultSettings,
 			urlLabels: true,
-			relatedLabels: false,
 		},
 	],
 	[
@@ -355,9 +317,7 @@ const testCases = [
 			name: "Full Name",
 		},
 		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
+			...defaultSettings,
 			relatedLabels: true,
 		},
 	],
@@ -393,12 +353,7 @@ const testCases = [
 			"related names": ["[[Test Nordmann]]", "[[Test Nordmann]]"],
 			name: "Full Name",
 		},
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	[
 		"Should parse Instant Message",
@@ -470,12 +425,7 @@ const testCases = [
 			],
 			name: "Full Name",
 		},
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	[
 		"Should parse Instant Message",
@@ -514,12 +464,7 @@ const testCases = [
 			],
 			name: "Full Name",
 		},
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	[
 		"Should parse social profiles",
@@ -573,12 +518,7 @@ const testCases = [
 			],
 			name: "Full Name",
 		},
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	[
 		"Should parse social profiles",
@@ -646,12 +586,7 @@ const testCases = [
 			],
 			name: "Full Name",
 		},
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	[
 		"Should parse date",
@@ -679,12 +614,7 @@ const testCases = [
 			date: ["Anniversary: 1604-04-01", "1604-02-20"],
 			name: "Full Name",
 		},
-		{
-			telLabels: false,
-			emailLabels: false,
-			urlLabels: false,
-			relatedLabels: false,
-		},
+		defaultSettings,
 	],
 	/* [
 		"Should parse all",
@@ -755,17 +685,11 @@ describe("createFrontmatter", () => {
 					emailLabels: boolean;
 					urlLabels: boolean;
 					relatedLabels: boolean;
+					excludedKeys: string;
 				},
 			) => {
 				expect(
-					createFrontmatter(
-						parsedVCard,
-						"n photo prodid rev uid version xAbadr xAbLabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality".split(
-							/\s+/,
-						),
-						"Full Name",
-						settings,
-					),
+					createFrontmatter(parsedVCard, "Full Name", settings),
 				).toEqual(expected);
 			},
 		);
