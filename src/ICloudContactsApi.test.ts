@@ -2,54 +2,60 @@ import { describe, expect, jest, test } from "@jest/globals";
 import ICloudContactsApi, { ICloudVCard } from "./ICloudContactsApi";
 import { ICloudContactsSettings } from "./SettingTab";
 
-const mockApp = {
-	fileManager: {
-		processFrontMatter:
-			jest.fn<
-				(
-					file: any,
-					fn: (frontmatter: any) => void,
-					options?: any,
-				) => Promise<void>
-			>(),
-		renameFile: jest.fn<(file: any, newPath: string) => Promise<void>>(),
-	},
-	vault: {
-		adapter: {
-			list: jest.fn<(normalizePath: string) => Promise<any>>(),
-			stat: jest.fn<(normalizePath: string) => Promise<any | null>>(),
-			write: jest.fn<
-				(
-					normalizePath: string,
-					data: string,
-					options?: any,
-				) => Promise<void>
-			>(),
+const mockObsidianApi = {
+	normalizePath: jest.fn<(path: string) => string>(),
+	parseYaml: jest.fn<(yaml: string) => any>(),
+	app: {
+		fileManager: {
+			processFrontMatter:
+				jest.fn<
+					(
+						file: any,
+						fn: (frontmatter: any) => void,
+						options?: any,
+					) => Promise<void>
+				>(),
+			renameFile:
+				jest.fn<(file: any, newPath: string) => Promise<void>>(),
 		},
-		append: jest.fn<
-			(file: any, data: string, options?: any) => Promise<void>
-		>(),
-		create: jest.fn<
-			(path: string, data: string, options?: any) => Promise<any>
-		>(),
-		createFolder: jest.fn<(path: string) => Promise<any>>(),
-		getAbstractFileByPath: jest.fn<(path: string) => any>(),
-		getFileByPath: jest.fn<(path: string) => any>(),
-		getFolderByPath: jest.fn<(path: string) => any>(),
-		process:
-			jest.fn<
-				(
-					file: any,
-					fn: (data: string) => string,
-					options?: any,
-				) => Promise<string>
+		vault: {
+			adapter: {
+				list: jest.fn<(normalizePath: string) => Promise<any>>(),
+				stat: jest.fn<(normalizePath: string) => Promise<any | null>>(),
+				write: jest.fn<
+					(
+						normalizePath: string,
+						data: string,
+						options?: any,
+					) => Promise<void>
+				>(),
+			},
+			append: jest.fn<
+				(file: any, data: string, options?: any) => Promise<void>
 			>(),
-		read: jest.fn<(file: any) => Promise<string>>(),
-	},
-	workspace: {
-		getLeaf: () => ({
-			openFile: jest.fn<(file: any, openState?: any) => Promise<void>>(),
-		}),
+			create: jest.fn<
+				(path: string, data: string, options?: any) => Promise<any>
+			>(),
+			createFolder: jest.fn<(path: string) => Promise<any>>(),
+			getAbstractFileByPath: jest.fn<(path: string) => any>(),
+			getFileByPath: jest.fn<(path: string) => any>(),
+			getFolderByPath: jest.fn<(path: string) => any>(),
+			process:
+				jest.fn<
+					(
+						file: any,
+						fn: (data: string) => string,
+						options?: any,
+					) => Promise<string>
+				>(),
+			read: jest.fn<(file: any) => Promise<string>>(),
+		},
+		workspace: {
+			getLeaf: () => ({
+				openFile:
+					jest.fn<(file: any, openState?: any) => Promise<void>>(),
+			}),
+		},
 	},
 };
 
@@ -98,34 +104,36 @@ const mockListedFiles = {
 describe("updateContacts", () => {
 	test("Should handle no files of iCloudVCards", () => {
 		mockFetchContacts.mockResolvedValueOnce([]);
-		mockApp.vault.adapter.list.mockResolvedValueOnce(mockListedFiles);
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce(
+			mockListedFiles,
+		);
 
 		const api = new ICloudContactsApi(
-			mockApp,
+			mockObsidianApi,
 			DEFAULT_SETTINGS,
 			mockFetchContacts,
 			mockNoticeShower,
-			(s: string) => s,
-			(_yaml: string) => ({}) as any,
 		);
 		expect(api.updateContacts()).resolves.toBeUndefined();
 	});
 
 	test("Should write error to error file if fetchContacts rejects", async () => {
 		mockFetchContacts.mockRejectedValueOnce(new Error("error"));
-		mockApp.vault.getFileByPath.mockReturnValueOnce("errorFile");
-		mockApp.vault.adapter.list.mockResolvedValueOnce(mockListedFiles);
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValueOnce(
+			"errorFile",
+		);
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce(
+			mockListedFiles,
+		);
 
 		const api = new ICloudContactsApi(
-			mockApp,
+			mockObsidianApi,
 			DEFAULT_SETTINGS,
 			mockFetchContacts,
 			mockNoticeShower,
-			(s: string) => s,
-			(_yaml: string) => ({}) as any,
 		);
 		await api.updateContacts();
-		expect(mockApp.vault.append).toHaveBeenCalledWith(
+		expect(mockObsidianApi.app.vault.append).toHaveBeenCalledWith(
 			"errorFile",
 			expect.stringContaining("error"),
 		);

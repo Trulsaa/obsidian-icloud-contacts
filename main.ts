@@ -1,5 +1,16 @@
-import { Notice, Plugin, normalizePath, parseYaml } from "obsidian";
-import ICloudContactsApi from "src/ICloudContactsApi";
+import {
+	App,
+	DataWriteOptions,
+	Notice,
+	OpenViewState,
+	Plugin,
+	TFile,
+	normalizePath,
+	parseYaml,
+} from "obsidian";
+import ICloudContactsApi, {
+	OnlyRequiredFromObsidianApi,
+} from "src/ICloudContactsApi";
 import { fetchContacts } from "src/iCloudClient";
 import {
 	DEFAULT_SETTINGS,
@@ -17,6 +28,60 @@ function showNotice(message: string, duration: number) {
 	};
 }
 
+function createObsidianApiWrapper(app: App): OnlyRequiredFromObsidianApi {
+	return {
+		normalizePath: normalizePath,
+		parseYaml: parseYaml,
+		app: {
+			fileManager: {
+				processFrontMatter: (
+					file: TFile,
+					fn: (frontmatter: any) => void,
+				) => app.fileManager.processFrontMatter(file, fn),
+				renameFile: (file: TFile, newPath: string) =>
+					app.fileManager.renameFile(file, newPath),
+			},
+			vault: {
+				adapter: {
+					list: (normalizedPath: string) =>
+						app.vault.adapter.list(normalizedPath),
+					write: (
+						normalizedPath: string,
+						data: string,
+						_options?: DataWriteOptions,
+					) => app.vault.adapter.write(normalizedPath, data),
+				},
+				append: (
+					file: TFile,
+					data: string,
+					_options?: DataWriteOptions,
+				) => app.vault.append(file, data),
+				create: (
+					path: string,
+					data: string,
+					_options?: DataWriteOptions,
+				) => app.vault.create(path, data),
+				createFolder: (path: string) => app.vault.createFolder(path),
+				getFileByPath: (path: string) => app.vault.getFileByPath(path),
+				getFolderByPath: (path: string) =>
+					app.vault.getFolderByPath(path),
+				process: (
+					file: TFile,
+					fn: (data: string) => string,
+					_options?: DataWriteOptions,
+				) => app.vault.process(file, fn),
+				read: (file: TFile) => app.vault.read(file),
+			},
+			workspace: {
+				getLeaf: () => ({
+					openFile: (file: TFile, _openState?: OpenViewState) =>
+						app.workspace.getLeaf().openFile(file),
+				}),
+			},
+		},
+	};
+}
+
 export default class ICloudContacts extends Plugin {
 	settings: ICloudContactsSettings;
 	private api: ICloudContactsApi;
@@ -29,12 +94,10 @@ export default class ICloudContacts extends Plugin {
 		);
 
 		this.api = new ICloudContactsApi(
-			this.app,
+			createObsidianApiWrapper(this.app),
 			this.settings,
 			fetchContacts,
 			showNotice,
-			normalizePath,
-			parseYaml,
 		);
 
 		// This adds a simple command that can be triggered anywhere

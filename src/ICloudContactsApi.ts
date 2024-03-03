@@ -24,30 +24,58 @@ interface ListedFiles {
 	folders: string[];
 }
 
-interface OnlyRequiredFromObsidianApp {
-	fileManager: {
-		processFrontMatter: (
-			tFile: any,
-			fn: (frontmatter: any) => void,
-		) => Promise<void>;
-		renameFile: (tFile: any, newPath: string) => Promise<void>;
+type TAbstractFile = {
+	vault: Vault;
+	path: string;
+	name: string;
+	parent: TFolder | null;
+};
+
+type Vault = {
+	adapter: {
+		list: (normalizedPath: string) => Promise<ListedFiles>;
+		write: (normalizedPath: string, data: string) => Promise<void>;
 	};
-	vault: {
-		adapter: {
-			list: (normalizePath: string) => Promise<ListedFiles>;
-			write: (normalizePath: string, data: string) => Promise<void>;
+	append: (file: TFile, data: string) => Promise<void>;
+	create: (path: string, data: string) => Promise<TFile>;
+	createFolder: (path: string) => Promise<TFolder>;
+	getFileByPath: (path: string) => TFile | null;
+	getFolderByPath: (path: string) => TFolder | null;
+	process: (file: TFile, fn: (data: string) => string) => Promise<string>;
+	read: (file: TFile) => Promise<string>;
+};
+
+type TFile = {
+	stat: {
+		ctime: number;
+		mtime: number;
+		size: number;
+	};
+	basename: string;
+	extension: string;
+} & TAbstractFile;
+
+type TFolder = {
+	children: TAbstractFile[];
+	isRoot: () => boolean;
+};
+
+export interface OnlyRequiredFromObsidianApi {
+	normalizePath: (path: string) => string;
+	parseYaml: (yaml: string) => any;
+	app: {
+		fileManager: {
+			processFrontMatter: (
+				file: TFile,
+				fn: (frontmatter: any) => void,
+			) => Promise<void>;
+			renameFile: (file: TFile, newPath: string) => Promise<void>;
 		};
-		append: (tFile: any, data: string) => Promise<void>;
-		create: (path: string, data: string) => Promise<any>;
-		createFolder: (path: string) => Promise<any>;
-		getFileByPath: (path: string) => any;
-		getFolderByPath: (path: string) => any;
-		process: (tFile: any, fn: (data: string) => string) => Promise<string>;
-		read: (tFile: any) => Promise<string>;
-	};
-	workspace: {
-		getLeaf: () => {
-			openFile: (tFile: any) => Promise<void>;
+		vault: Vault;
+		workspace: {
+			getLeaf: () => {
+				openFile: (file: TFile) => Promise<void>;
+			};
 		};
 	};
 }
@@ -61,22 +89,27 @@ type NoticeShower = (
 };
 
 export default class ICloudContactsApi {
+	private app: OnlyRequiredFromObsidianApi["app"];
+	private normalizePath: OnlyRequiredFromObsidianApi["normalizePath"];
+	private parseYaml: OnlyRequiredFromObsidianApi["parseYaml"];
 	private newContacts: ICloudVCard[] = [];
 	private modifiedContacts: ICloudVCard[] = [];
 	private deletedContacts: ICloudVCard[] = [];
 	private skippedContacts: ICloudVCard[] = [];
 
 	constructor(
-		private app: OnlyRequiredFromObsidianApp,
+		onlyRequiredFromObsidianApp: OnlyRequiredFromObsidianApi,
 		private settings: ICloudContactsSettings,
 		private fetchContacts: (
 			username: string,
 			password: string,
 		) => Promise<ICloudVCard[]>,
 		private noticeShower: NoticeShower,
-		private normalizePath: (path: string) => string,
-		private parseYaml: (yaml: string) => any,
-	) {}
+	) {
+		this.app = onlyRequiredFromObsidianApp.app;
+		this.normalizePath = onlyRequiredFromObsidianApp.normalizePath;
+		this.parseYaml = onlyRequiredFromObsidianApp.parseYaml;
+	}
 
 	async updateContacts(options = { rewriteAll: false }) {
 		try {
