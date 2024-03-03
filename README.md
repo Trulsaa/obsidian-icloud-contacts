@@ -19,6 +19,7 @@ This plugin provides functions to sync contacts from your iCloud account to a fo
 -   Sync contacts from your iCloud to Obsidian
 -   Creates a file for each contact with properties corresponding to contact details.
 -   This plugin only updates the properties, the title and the top H1 header (the name). Any further info written in the files will not be touched when updating the contact.
+-   You can add your own properties to the frontmatter. The plugin will only manage the following property keys: name, organization, departement, telephone, email, url, related names, instant message, social profile, date, birthday pluss any of the kays you remove from the excluded keys setting.
 
 ## How to use
 
@@ -27,7 +28,7 @@ This plugin provides functions to sync contacts from your iCloud account to a fo
 3. Run the command `Obsidian iCloud contacts: Update contacts` to sync your contacts
 4. After syncing is complete, you will see a notification stating how many Contacts have been synced.
 
-Now that you have a folder with all your contacts you can link all your projects to their participants. All your vacation plans to your travel partners. All your meeting notes to the participants. 
+Now that you have a folder with all your contacts you can link all your projects to their participants. All your vacation plans to your travel partners. All your meeting notes to the participants.
 
 In addition, you can for example use the [dataview plugin](https://blacksmithgu.github.io/obsidian-dataview/) to display a table with email and phone number for all the contacts you have referenced in the current file like this.
 
