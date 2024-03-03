@@ -490,6 +490,10 @@ const getFullNameTestCases = [
 		"N:Nordmann;Test;middlename;prefix;suffix\r\nFN:",
 		"prefix Test middlename Nordmann suffix",
 	],
+	[
+		'N:;;;;\r\nFN:Bergen lufthavn\\, Flesland\r\nORG:Bergen lufthavn\\, Flesland;"',
+		"Bergen lufthavn, Flesland",
+	],
 ];
 
 describe("parser", () => {
