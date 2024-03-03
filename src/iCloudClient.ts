@@ -460,7 +460,7 @@ async function davRequest(params: any): Promise<DAVResponse[]> {
 						return name;
 					},
 				},
-		  )
+			)
 		: body;
 
 	const davResponse = await requestUrl({
@@ -603,3 +603,4 @@ async function supportedReportSet(params: {
 		) ?? []
 	);
 }
+

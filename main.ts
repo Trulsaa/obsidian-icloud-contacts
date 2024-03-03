@@ -6,7 +6,6 @@ import {
 	Plugin,
 	TFile,
 	normalizePath,
-	parseYaml,
 } from "obsidian";
 import ICloudContactsApi, {
 	OnlyRequiredFromObsidianApi,
@@ -31,7 +30,6 @@ function showNotice(message: string, duration: number) {
 function createObsidianApiWrapper(app: App): OnlyRequiredFromObsidianApi {
 	return {
 		normalizePath: normalizePath,
-		parseYaml: parseYaml,
 		app: {
 			fileManager: {
 				processFrontMatter: (
@@ -70,13 +68,15 @@ function createObsidianApiWrapper(app: App): OnlyRequiredFromObsidianApi {
 					fn: (data: string) => string,
 					_options?: DataWriteOptions,
 				) => app.vault.process(file, fn),
-				read: (file: TFile) => app.vault.read(file),
 			},
 			workspace: {
 				getLeaf: () => ({
 					openFile: (file: TFile, _openState?: OpenViewState) =>
 						app.workspace.getLeaf().openFile(file),
 				}),
+			},
+			metadataCache: {
+				getCache: (path: string) => app.metadataCache.getCache(path),
 			},
 		},
 	};

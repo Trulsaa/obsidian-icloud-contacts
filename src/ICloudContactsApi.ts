@@ -10,8 +10,7 @@ export type ICloudVCard = {
 };
 
 type Properties = {
-	[key: string]: string | string[] | ICloudVCard;
-	iCloudVCard: ICloudVCard;
+	[key: string]: any;
 };
 
 const deletedFolder = "Deleted";
@@ -42,7 +41,6 @@ type Vault = {
 	getFileByPath: (path: string) => TFile | null;
 	getFolderByPath: (path: string) => TFolder | null;
 	process: (file: TFile, fn: (data: string) => string) => Promise<string>;
-	read: (file: TFile) => Promise<string>;
 };
 
 type TFile = {
@@ -60,9 +58,10 @@ type TFolder = {
 	isRoot: () => boolean;
 };
 
+export type CachedMetadata = { frontmatter?: Properties };
+
 export interface OnlyRequiredFromObsidianApi {
 	normalizePath: (path: string) => string;
-	parseYaml: (yaml: string) => any;
 	app: {
 		fileManager: {
 			processFrontMatter: (
@@ -76,6 +75,9 @@ export interface OnlyRequiredFromObsidianApi {
 			getLeaf: () => {
 				openFile: (file: TFile) => Promise<void>;
 			};
+		};
+		metadataCache: {
+			getCache: (path: string) => CachedMetadata | null;
 		};
 	};
 }
@@ -91,7 +93,6 @@ type NoticeShower = (
 export default class ICloudContactsApi {
 	private app: OnlyRequiredFromObsidianApi["app"];
 	private normalizePath: OnlyRequiredFromObsidianApi["normalizePath"];
-	private parseYaml: OnlyRequiredFromObsidianApi["parseYaml"];
 	private newContacts: ICloudVCard[] = [];
 	private modifiedContacts: ICloudVCard[] = [];
 	private deletedContacts: ICloudVCard[] = [];
@@ -104,16 +105,15 @@ export default class ICloudContactsApi {
 			username: string,
 			password: string,
 		) => Promise<ICloudVCard[]>,
-		private noticeShower: NoticeShower,
+		private showNotice: NoticeShower,
 	) {
 		this.app = onlyRequiredFromObsidianApp.app;
 		this.normalizePath = onlyRequiredFromObsidianApp.normalizePath;
-		this.parseYaml = onlyRequiredFromObsidianApp.parseYaml;
 	}
 
 	async updateContacts(options = { rewriteAll: false }) {
 		try {
-			const startNotice = this.noticeShower(
+			const startNotice = this.showNotice(
 				`${pluginName}: Updating contacts...`,
 				0,
 			);
@@ -160,25 +160,25 @@ export default class ICloudContactsApi {
 	}
 
 	private async processVCard(
-		existingContacts: {
-			properties: Properties;
-			body: string;
-		}[],
+		existingFrontmatter: Properties[],
 		iCloudVCard: ICloudVCard,
 		options: { rewriteAll: boolean },
 	) {
 		try {
-			const existingContact = this.getExistingContact(
-				existingContacts,
+			const existingContactFrontmatter = this.getExistingContact(
+				existingFrontmatter,
 				iCloudVCard,
 			);
-			if (existingContact) {
+			if (existingContactFrontmatter) {
 				const isModified = this.isModified(
-					existingContact,
+					existingContactFrontmatter,
 					iCloudVCard,
 				);
 				if (isModified || options.rewriteAll) {
-					await this.updateContactFile(iCloudVCard, existingContact);
+					await this.updateContactFile(
+						iCloudVCard,
+						existingContactFrontmatter,
+					);
 					this.modifiedContacts.push(iCloudVCard);
 				} else {
 					this.skippedContacts.push(iCloudVCard);
@@ -202,7 +202,7 @@ export default class ICloudContactsApi {
 			noticeText += `Deleted ${this.deletedContacts.length}\n`;
 		if (this.skippedContacts.length > 0)
 			noticeText += `Skipped ${this.skippedContacts.length}\n`;
-		this.noticeShower(noticeText, 7000);
+		this.showNotice(noticeText, 7000);
 		console.log(pluginName, {
 			newContacts: this.newContacts,
 			modifiedContacts: this.modifiedContacts,
@@ -216,22 +216,17 @@ export default class ICloudContactsApi {
 	}
 
 	private async moveDeletedContacts(
-		existingContacts: {
-			properties: Properties;
-			body: string;
-		}[],
+		existingFrontmatter: Properties[],
 		iCloudVCards: ICloudVCard[],
 	) {
-		this.deletedContacts = existingContacts
+		this.deletedContacts = existingFrontmatter
 			.filter(
 				(c) =>
 					!iCloudVCards.some(
-						(i) =>
-							i.url ===
-							c.properties[iCloudVCardPropertieName].url,
+						(i) => i.url === c[iCloudVCardPropertieName].url,
 					),
 			)
-			.map((c) => c.properties[iCloudVCardPropertieName]);
+			.map((c) => c[iCloudVCardPropertieName]);
 
 		if (this.deletedContacts.length > 0) {
 			const folderPath = this.settings.folder + "/" + deletedFolder;
@@ -261,43 +256,36 @@ export default class ICloudContactsApi {
 	}
 
 	private isModified(
-		existingContact: { properties: Properties; body: string },
+		existingFrontmatter: Properties,
 		iCloudVCard: ICloudVCard,
 	) {
 		return (
-			existingContact.properties[iCloudVCardPropertieName].etag !==
+			existingFrontmatter[iCloudVCardPropertieName].etag !==
 			iCloudVCard.etag
 		);
 	}
 
 	private getExistingContact(
-		currentContacts: {
-			properties: Properties;
-			body: string;
-		}[],
+		existingFrontmatter: Properties[],
 		iCloudVCard: ICloudVCard,
 	) {
-		return currentContacts.find(
-			(c) =>
-				c.properties[iCloudVCardPropertieName].url === iCloudVCard.url,
+		return existingFrontmatter.find(
+			(c) => c[iCloudVCardPropertieName].url === iCloudVCard.url,
 		);
 	}
 
 	private async updateContactFile(
 		iCloudVCard: ICloudVCard,
-		existingContact: {
-			properties: Properties;
-			body: string;
-		},
+		existingFrontmatter: Properties,
 	) {
 		const newFullName = getFullName(iCloudVCard.data);
-		if (!existingContact.properties[iCloudVCardPropertieName].data) {
+		if (!existingFrontmatter[iCloudVCardPropertieName].data) {
 			throw new Error(
 				`existingContact.properties[${iCloudVCardPropertieName}].data is missing`,
 			);
 		}
 		const existingContactFullName = getFullName(
-			existingContact.properties[iCloudVCardPropertieName].data,
+			existingFrontmatter[iCloudVCardPropertieName].data,
 		);
 
 		const contactFile = this.getContactFile(existingContactFullName);
@@ -326,11 +314,9 @@ export default class ICloudContactsApi {
 		// Så må man ha samme settings som forrige gang. Det en diff på settings kan også brukes til å kjøre update all når settings er endret.
 		const prevFrontMatter = createFrontmatter(
 			parseVCard(
-				existingContact.properties[iCloudVCardPropertieName].data,
+				existingFrontmatter[iCloudVCardPropertieName].data,
 			) as VCards[],
-			getFullName(
-				existingContact.properties[iCloudVCardPropertieName].data,
-			),
+			getFullName(existingFrontmatter[iCloudVCardPropertieName].data),
 			this.settings,
 		);
 
@@ -406,59 +392,28 @@ export default class ICloudContactsApi {
 	private async getAllCurrentProperties(folder: string) {
 		// Get all files in folder
 		const listedFiles = await this.app.vault.adapter.list(folder);
+		console.log("listedFiles", listedFiles);
 		return Promise.all(
 			listedFiles.files
 				.filter(
 					(fileName) =>
 						fileName.endsWith(".md") &&
-						!fileName.contains(errorsFileName),
+						!fileName.includes(errorsFileName),
 				)
 				.map((fileName) => this.getContactProperties(fileName)),
 		);
 	}
 
 	private async getContactProperties(filePath: string) {
-		const contactFile = this.app.vault.getFileByPath(
-			this.normalizePath(filePath),
-		);
-
-		if (contactFile) {
-			const content = await this.app.vault.read(contactFile);
-			const delimiter = "---";
-			const endOfProperties = content.indexOf(delimiter, 4);
-			const propertiesString = content
-				.slice(0, endOfProperties)
-				.replace(delimiter, "");
-			const properties: {
-				[key: string]: string | string[] | ICloudVCard;
-				iCloudVCard: ICloudVCard;
-			} = this.parseYaml(propertiesString);
-			if (
-				!properties[iCloudVCardPropertieName] ||
-				!properties[iCloudVCardPropertieName].data
-			) {
-				throw new Error(
-					`properties[${iCloudVCardPropertieName}].data is undefined`,
-				);
-			}
-			const fullName = this.normalizePath(
-				getFullName(properties[iCloudVCardPropertieName].data),
-			);
-			const title = `# ${fullName}`;
-			const endOfContactHeader = content.indexOf(title) + title.length;
-			const body = content.slice(endOfContactHeader);
-			return { properties, body };
+		const cache = this.app.metadataCache.getCache(filePath);
+		if (!cache) {
+			throw new Error(`cache is falsy in ${filePath}`);
 		}
-		return {
-			properties: {
-				[iCloudVCardPropertieName]: {
-					url: "",
-					etag: "",
-					data: "",
-				},
-			},
-			body: "",
-		};
+		const frontmatter = cache.frontmatter;
+		if (!frontmatter) {
+			throw new Error(`frontmatter is falsy in ${filePath})}`);
+		}
+		return frontmatter;
 	}
 
 	private async getCreateFolder(folderPath: string) {
