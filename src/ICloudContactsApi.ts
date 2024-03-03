@@ -134,10 +134,6 @@ export default class ICloudContactsApi {
 
 			await this.moveDeletedContacts(existingContacts, iCloudVCards);
 
-			await this.app.vault.adapter.write(
-				".obsidian/plugins/icloud-contacts/lastDownloadedICloudVCards.json",
-				JSON.stringify(iCloudVCards),
-			);
 			startNotice.hide();
 			this.reportHappenings();
 		} catch (e) {
@@ -304,19 +300,18 @@ export default class ICloudContactsApi {
 			});
 		}
 
-		const parsedVCards = parseVCard(iCloudVCard.data);
+		const parsedVCard = parseVCard(iCloudVCard.data);
 		const newFrontMatter = createFrontmatter(
-			parsedVCards as VCards[],
+			parsedVCard as VCards[],
 			newFullName,
 			this.settings,
 		);
-		// TODO: for at man skal være sikker på å kunne generere opp de samme frontmatterene som forrige gang
-		// Så må man ha samme settings som forrige gang. Det en diff på settings kan også brukes til å kjøre update all når settings er endret.
+
 		const prevFrontMatter = createFrontmatter(
 			parseVCard(
 				existingFrontmatter[iCloudVCardPropertieName].data,
 			) as VCards[],
-			getFullName(existingFrontmatter[iCloudVCardPropertieName].data),
+			existingContactFullName,
 			this.settings,
 		);
 
@@ -392,7 +387,6 @@ export default class ICloudContactsApi {
 	private async getAllCurrentProperties(folder: string) {
 		// Get all files in folder
 		const listedFiles = await this.app.vault.adapter.list(folder);
-		console.log("listedFiles", listedFiles);
 		return Promise.all(
 			listedFiles.files
 				.filter(
