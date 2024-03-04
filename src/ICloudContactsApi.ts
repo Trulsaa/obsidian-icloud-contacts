@@ -327,7 +327,8 @@ export default class ICloudContactsApi {
 				for (const [key, value] of Object.entries(newFrontMatter)) {
 					fileFrontmatter[key] = value;
 				}
-				fileFrontmatter[iCloudVCardPropertieName] = iCloudVCard;
+				fileFrontmatter[iCloudVCardPropertieName] =
+					JSON.stringify(iCloudVCard);
 			},
 		);
 	}
@@ -362,7 +363,7 @@ export default class ICloudContactsApi {
 			for (const [key, value] of Object.entries(frontMatter)) {
 				fm[key] = value;
 			}
-			fm[iCloudVCardPropertieName] = iCloudVCard;
+			fm[iCloudVCardPropertieName] = JSON.stringify(iCloudVCard);
 		});
 	}
 
@@ -407,6 +408,11 @@ export default class ICloudContactsApi {
 		if (!frontmatter) {
 			throw new Error(`frontmatter is falsy in ${filePath})}`);
 		}
+		if (typeof frontmatter[iCloudVCardPropertieName] === "string")
+			if (frontmatter[iCloudVCardPropertieName])
+				frontmatter[iCloudVCardPropertieName] = JSON.parse(
+					frontmatter[iCloudVCardPropertieName],
+				);
 		return frontmatter;
 	}
 

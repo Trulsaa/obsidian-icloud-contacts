@@ -184,7 +184,7 @@ describe("updateContacts", () => {
 			name: "Test Nordmann",
 			email: ["test@test.test"],
 			telephone: ["87654321"],
-			iCloudVCard: testVCard,
+			iCloudVCard: JSON.stringify(testVCard),
 		});
 	});
 
@@ -230,7 +230,7 @@ describe("updateContacts", () => {
 			name: "Test Nordmann",
 			email: ["test@test.test", "work@e.mail"],
 			telephone: ["87654321"],
-			iCloudVCard: updatedTestVCard,
+			iCloudVCard: JSON.stringify(updatedTestVCard),
 		});
 	});
 
