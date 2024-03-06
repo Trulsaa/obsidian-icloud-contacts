@@ -1,7 +1,14 @@
 import { App, PluginSettingTab, Setting, TextComponent } from "obsidian";
 import ICloudContacts from "../main";
+import { ICloudVCard } from "./ICloudContactsApi";
 
 export interface ICloudContactsSettings {
+	[key: string]:
+		| string
+		| boolean
+		| ICloudContactsSettings
+		| undefined
+		| ICloudVCard[];
 	username: string;
 	password: string;
 	folder: string;
@@ -10,6 +17,8 @@ export interface ICloudContactsSettings {
 	urlLabels: boolean;
 	relatedLabels: boolean;
 	excludedKeys: string;
+	previousUpdateSettings?: ICloudContactsSettings;
+	previousUpdateData: ICloudVCard[];
 }
 
 export const DEFAULT_SETTINGS: ICloudContactsSettings = {
@@ -22,7 +31,29 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	relatedLabels: false,
 	excludedKeys:
 		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality",
+	previousUpdateData: [],
 };
+
+export function compareSettings(a: ICloudContactsSettings, b: ICloudContactsSettings) {
+	return Object.entries(a)
+		.filter(
+			([key]) =>
+				key !== "previousUpdateSettings" &&
+				key !== "previousUpdateData",
+		)
+		.every(([key, value]) => value == b[key]);
+}
+
+function onChangeHandler(key: string, plugin: ICloudContacts) {
+	return async (value: string | boolean) => {
+		if (plugin.settings.previousUpdateSettings === undefined) {
+			plugin.settings.previousUpdateSettings = DEFAULT_SETTINGS;
+		}
+		plugin.settings.previousUpdateSettings[key] = plugin.settings[key];
+		plugin.settings[key] = value;
+		await plugin.saveSettings();
+	};
+}
 
 export class SettingTab extends PluginSettingTab {
 	plugin: ICloudContacts;
@@ -44,14 +75,11 @@ export class SettingTab extends PluginSettingTab {
 				text
 					.setPlaceholder("Enter your username")
 					.setValue(this.plugin.settings.username)
-					.onChange(async (value) => {
-						this.plugin.settings.username = value;
-						await this.plugin.saveSettings();
-					}),
+					.onChange(onChangeHandler("username", this.plugin)),
 			);
 
-		let inputEl: TextComponent;
-		const apikeuEl = new Setting(containerEl)
+		let passwordInputEl: TextComponent;
+		const passwordSettingEl = new Setting(containerEl)
 			.setName("iCloud app specific password")
 			.setDesc(
 				"You need to generate an app-specific password for your iCloud account.",
@@ -60,22 +88,19 @@ export class SettingTab extends PluginSettingTab {
 				text
 					.setPlaceholder("App specific password")
 					.setValue(this.plugin.settings.password)
-					.onChange(async (value) => {
-						this.plugin.settings.password = value;
-						await this.plugin.saveSettings();
-					})
+					.onChange(onChangeHandler("password", this.plugin))
 					.then((textEl) => {
-						inputEl = textEl;
+						passwordInputEl = textEl;
 					})
 					.inputEl.setAttribute("type", "password"),
 			);
 
-		apikeuEl.addToggle((v) =>
+		passwordSettingEl.addToggle((v) =>
 			v.onChange((value) => {
 				if (value) {
-					inputEl.inputEl.setAttribute("type", "clear");
+					passwordInputEl.inputEl.setAttribute("type", "clear");
 				} else {
-					inputEl.inputEl.setAttribute("type", "password");
+					passwordInputEl.inputEl.setAttribute("type", "password");
 				}
 			}),
 		);
@@ -95,28 +120,18 @@ export class SettingTab extends PluginSettingTab {
 				text
 					.setPlaceholder("Enter folder name")
 					.setValue(this.plugin.settings.folder)
-					.onChange(async (value) => {
-						this.plugin.settings.folder = value;
-						await this.plugin.saveSettings();
-					}),
+					.onChange(onChangeHandler("folder", this.plugin)),
 			);
 
 		containerEl.createEl("br");
 		containerEl.createEl("h3", { text: "Parameters" });
-		containerEl.createEl("p", {
-			text: "Make sure to run the 'Update all Contacts' function if you want changes to any of the below settings to take affect on existing contacts. Otherwise they will only apply to new and updated contacts after running 'Update Contacts'",
-			cls: "setting-item-description",
-		});
 
 		new Setting(containerEl)
 			.setName("Add labels to telephone numbers")
 			.addToggle((bool) =>
 				bool
 					.setValue(this.plugin.settings.telLabels)
-					.onChange(async (value) => {
-						this.plugin.settings.telLabels = value;
-						await this.plugin.saveSettings();
-					}),
+					.onChange(onChangeHandler("telLabels", this.plugin)),
 			);
 
 		new Setting(containerEl)
@@ -124,10 +139,7 @@ export class SettingTab extends PluginSettingTab {
 			.addToggle((bool) =>
 				bool
 					.setValue(this.plugin.settings.emailLabels)
-					.onChange(async (value) => {
-						this.plugin.settings.emailLabels = value;
-						await this.plugin.saveSettings();
-					}),
+					.onChange(onChangeHandler("emailLabels", this.plugin)),
 			);
 
 		new Setting(containerEl)
@@ -135,10 +147,7 @@ export class SettingTab extends PluginSettingTab {
 			.addToggle((bool) =>
 				bool
 					.setValue(this.plugin.settings.urlLabels)
-					.onChange(async (value) => {
-						this.plugin.settings.urlLabels = value;
-						await this.plugin.saveSettings();
-					}),
+					.onChange(onChangeHandler("urlLabels", this.plugin)),
 			);
 
 		new Setting(containerEl)
@@ -146,14 +155,11 @@ export class SettingTab extends PluginSettingTab {
 			.addToggle((bool) =>
 				bool
 					.setValue(this.plugin.settings.relatedLabels)
-					.onChange(async (value) => {
-						this.plugin.settings.relatedLabels = value;
-						await this.plugin.saveSettings();
-					}),
+					.onChange(onChangeHandler("relatedLabels", this.plugin)),
 			);
 
 		new Setting(containerEl)
-			.setName("Excluded keys)")
+			.setName("Excluded keys")
 			.setDesc(
 				"A space delimited list of all the keys that should be excluded in the properties of each contact. The data will still be pressent under the iCloudVCard propertie",
 			)
@@ -163,10 +169,7 @@ export class SettingTab extends PluginSettingTab {
 						"Add space delimited list of keys to exclude",
 					)
 					.setValue(this.plugin.settings.excludedKeys)
-					.onChange(async (value) => {
-						this.plugin.settings.excludedKeys = value;
-						await this.plugin.saveSettings();
-					}),
+					.onChange(onChangeHandler("excludedKeys", this.plugin)),
 			);
 	}
 }

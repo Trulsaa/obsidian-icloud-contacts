@@ -99,7 +99,7 @@ export class MockNotice {
 const mockFetchContacts =
 	jest.fn<(username: string, password: string) => Promise<ICloudVCard[]>>();
 
-export const DEFAULT_SETTINGS: ICloudContactsSettings = {
+const MOCK_DEFAULT_SETTINGS: ICloudContactsSettings = {
 	username: "username",
 	password: "password",
 	folder: "Contacts",
@@ -109,6 +109,22 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	relatedLabels: false,
 	excludedKeys:
 		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality",
+	settingsChanged: false,
+	previousUpdateSettings: {
+		username: "username",
+		password: "password",
+		folder: "Contacts",
+		telLabels: false,
+		emailLabels: false,
+		urlLabels: false,
+		relatedLabels: false,
+		excludedKeys:
+			"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality",
+		settingsChanged: false,
+		previousUpdateSettings: undefined,
+		previousUpdateData: [],
+	},
+	previousUpdateData: [],
 };
 
 const mockListedFiles = {
@@ -129,7 +145,7 @@ describe("updateContacts", () => {
 
 		const api = new ICloudContactsApi(
 			mockObsidianApi,
-			DEFAULT_SETTINGS,
+			MOCK_DEFAULT_SETTINGS,
 			mockFetchContacts,
 			mockNoticeShower,
 		);
@@ -147,7 +163,7 @@ describe("updateContacts", () => {
 
 		const api = new ICloudContactsApi(
 			mockObsidianApi,
-			DEFAULT_SETTINGS,
+			MOCK_DEFAULT_SETTINGS,
 			mockFetchContacts,
 			mockNoticeShower,
 		);
@@ -169,7 +185,7 @@ describe("updateContacts", () => {
 
 		const api = new ICloudContactsApi(
 			mockObsidianApi,
-			DEFAULT_SETTINGS,
+			MOCK_DEFAULT_SETTINGS,
 			mockFetchContacts,
 			mockNoticeShower,
 		);
@@ -218,7 +234,7 @@ describe("updateContacts", () => {
 
 		const api = new ICloudContactsApi(
 			mockObsidianApi,
-			DEFAULT_SETTINGS,
+			MOCK_DEFAULT_SETTINGS,
 			mockFetchContacts,
 			mockNoticeShower,
 		);
@@ -274,7 +290,7 @@ describe("updateContacts", () => {
 
 		const api = new ICloudContactsApi(
 			mockObsidianApi,
-			DEFAULT_SETTINGS,
+			MOCK_DEFAULT_SETTINGS,
 			mockFetchContacts,
 			mockNoticeShower,
 		);

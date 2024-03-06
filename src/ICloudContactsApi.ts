@@ -1,4 +1,4 @@
-import { ICloudContactsSettings } from "./SettingTab";
+import { ICloudContactsSettings, compareSettings } from "./SettingTab";
 import { VCards } from "./VCards";
 import { createFrontmatter } from "./frontMatter";
 import { getFullName, parseVCard } from "./parser";
@@ -128,20 +128,49 @@ export default class ICloudContactsApi {
 				this.settings.folder,
 			);
 
+			const previousUpdateData = this.settings.previousUpdateData || [];
+
 			for (const iCloudVCard of iCloudVCards) {
-				await this.processVCard(existingContacts, iCloudVCard, options);
+				const previousUpdateVCard = previousUpdateData.find(
+					(vCard) => vCard.url === iCloudVCard.url,
+				);
+				const existingContactFrontmatter = existingContacts.find(
+					(c) => c[iCloudVCardPropertieName].url === iCloudVCard.url,
+				);
+
+				if (
+					this.settings.previousUpdateSettings &&
+					compareSettings(
+						this.settings,
+						this.settings.previousUpdateSettings,
+					)
+				)
+					options.rewriteAll = true;
+
+				await this.processVCard(
+					previousUpdateVCard,
+					iCloudVCard,
+					options,
+					existingContactFrontmatter,
+				);
 			}
 
 			await this.moveDeletedContacts(existingContacts, iCloudVCards);
 
 			startNotice.hide();
 			this.reportHappenings();
+			return [
+				...this.newContacts,
+				...this.modifiedContacts,
+				...this.skippedContacts,
+			];
 		} catch (e) {
 			console.error(e);
 			this.handleError("Error when running updateContacts", e, {
 				options,
 			});
 		}
+		return [];
 	}
 
 	private validateSettings() {
@@ -156,15 +185,12 @@ export default class ICloudContactsApi {
 	}
 
 	private async processVCard(
-		existingFrontmatter: Properties[],
+		previousVCard: ICloudVCard | undefined,
 		iCloudVCard: ICloudVCard,
 		options: { rewriteAll: boolean },
+		existingContactFrontmatter?: Properties,
 	) {
 		try {
-			const existingContactFrontmatter = this.getExistingContact(
-				existingFrontmatter,
-				iCloudVCard,
-			);
 			if (existingContactFrontmatter) {
 				const isModified = this.isModified(
 					existingContactFrontmatter,
@@ -174,15 +200,17 @@ export default class ICloudContactsApi {
 					await this.updateContactFile(
 						iCloudVCard,
 						existingContactFrontmatter,
+						previousVCard,
 					);
 					this.modifiedContacts.push(iCloudVCard);
 				} else {
 					this.skippedContacts.push(iCloudVCard);
 				}
-			} else {
-				await this.createContactFile(iCloudVCard);
-				this.newContacts.push(iCloudVCard);
+				return;
 			}
+
+			await this.createContactFile(iCloudVCard);
+			this.newContacts.push(iCloudVCard);
 		} catch (e) {
 			this.handleError("Error trying to process contact", e, iCloudVCard);
 		}
@@ -205,10 +233,6 @@ export default class ICloudContactsApi {
 			deletedContacts: this.deletedContacts,
 			skippedContacts: this.skippedContacts,
 		});
-		this.newContacts = [];
-		this.modifiedContacts = [];
-		this.deletedContacts = [];
-		this.skippedContacts = [];
 	}
 
 	private async moveDeletedContacts(
@@ -261,18 +285,10 @@ export default class ICloudContactsApi {
 		);
 	}
 
-	private getExistingContact(
-		existingFrontmatter: Properties[],
-		iCloudVCard: ICloudVCard,
-	) {
-		return existingFrontmatter.find(
-			(c) => c[iCloudVCardPropertieName].url === iCloudVCard.url,
-		);
-	}
-
 	private async updateContactFile(
 		iCloudVCard: ICloudVCard,
 		existingFrontmatter: Properties,
+		previousVCard: ICloudVCard | undefined,
 	) {
 		const newFullName = getFullName(iCloudVCard.data);
 		if (!existingFrontmatter[iCloudVCardPropertieName].data) {
@@ -280,21 +296,18 @@ export default class ICloudContactsApi {
 				`existingContact.properties[${iCloudVCardPropertieName}].data is missing`,
 			);
 		}
-		const existingContactFullName = getFullName(
-			existingFrontmatter[iCloudVCardPropertieName].data,
-		);
 
-		const contactFile = this.getContactFile(existingContactFullName);
+		const contactFile = this.getContactFile(existingFrontmatter.name);
 		if (!contactFile) {
 			throw new Error("contactFile not found");
 		}
 
-		const isFullNameModified = existingContactFullName !== newFullName;
+		const isFullNameModified = existingFrontmatter.name !== newFullName;
 		if (isFullNameModified) {
-			await this.renameContactFile(existingContactFullName, newFullName);
+			await this.renameContactFile(existingFrontmatter.name, newFullName);
 			await this.app.vault.process(contactFile, (data) => {
 				return data.replace(
-					`# ${existingContactFullName}`,
+					`# ${existingFrontmatter.name}`,
 					`# ${newFullName}`,
 				);
 			});
@@ -307,13 +320,13 @@ export default class ICloudContactsApi {
 			this.settings,
 		);
 
-		const prevFrontMatter = createFrontmatter(
-			parseVCard(
-				existingFrontmatter[iCloudVCardPropertieName].data,
-			) as VCards[],
-			existingContactFullName,
-			this.settings,
-		);
+		let prevFrontMatter: Properties;
+		if (previousVCard && this.settings.previousUpdateSettings)
+			prevFrontMatter = createFrontmatter(
+				parseVCard(previousVCard.data) as VCards[],
+				getFullName(previousVCard.data),
+				this.settings.previousUpdateSettings,
+			);
 
 		await this.app.fileManager.processFrontMatter(
 			contactFile,
