@@ -23,7 +23,7 @@ jobs:
             - name: Release
               uses: softprops/action-gh-release@v2
               with:
-                  name: Release ${{ github.ref }}
+                  name: Release ${{ github.ref.name }}
                   files: |
                       main.js
                       manifest.json
