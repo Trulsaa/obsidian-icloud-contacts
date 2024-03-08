@@ -113,7 +113,7 @@ export default class ICloudContactsApi {
 
 	async updateContacts(options = { rewriteAll: false }) {
 		const haveSettingsChanged =
-			this.settings.previousUpdateSettings &&
+			!!this.settings.previousUpdateSettings &&
 			!this.isSameSettings(
 				this.settings,
 				this.settings.previousUpdateSettings,
