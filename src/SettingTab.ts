@@ -1,7 +1,14 @@
 import { App, PluginSettingTab, Setting, TextComponent } from "obsidian";
 import ICloudContacts from "../main";
+import { ICloudVCard } from "./ICloudContactsApi";
 
 export interface ICloudContactsSettings {
+	[key: string]:
+		| string
+		| boolean
+		| ICloudContactsSettings
+		| undefined
+		| ICloudVCard[];
 	username: string;
 	password: string;
 	folder: string;
@@ -10,6 +17,8 @@ export interface ICloudContactsSettings {
 	urlLabels: boolean;
 	relatedLabels: boolean;
 	excludedKeys: string;
+	previousUpdateSettings?: ICloudContactsSettings;
+	previousUpdateData?: ICloudVCard[];
 }
 
 export const DEFAULT_SETTINGS: ICloudContactsSettings = {
@@ -50,8 +59,8 @@ export class SettingTab extends PluginSettingTab {
 					}),
 			);
 
-		let inputEl: TextComponent;
-		const apikeuEl = new Setting(containerEl)
+		let passwordInputEl: TextComponent;
+		const passwordSettingEl = new Setting(containerEl)
 			.setName("iCloud app specific password")
 			.setDesc(
 				"You need to generate an app-specific password for your iCloud account.",
@@ -65,17 +74,17 @@ export class SettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 					.then((textEl) => {
-						inputEl = textEl;
+						passwordInputEl = textEl;
 					})
 					.inputEl.setAttribute("type", "password"),
 			);
 
-		apikeuEl.addToggle((v) =>
+		passwordSettingEl.addToggle((v) =>
 			v.onChange((value) => {
 				if (value) {
-					inputEl.inputEl.setAttribute("type", "clear");
+					passwordInputEl.inputEl.setAttribute("type", "clear");
 				} else {
-					inputEl.inputEl.setAttribute("type", "password");
+					passwordInputEl.inputEl.setAttribute("type", "password");
 				}
 			}),
 		);
@@ -103,10 +112,6 @@ export class SettingTab extends PluginSettingTab {
 
 		containerEl.createEl("br");
 		containerEl.createEl("h3", { text: "Parameters" });
-		containerEl.createEl("p", {
-			text: "Make sure to run the 'Update all Contacts' function if you want changes to any of the below settings to take affect on existing contacts. Otherwise they will only apply to new and updated contacts after running 'Update Contacts'",
-			cls: "setting-item-description",
-		});
 
 		new Setting(containerEl)
 			.setName("Add labels to telephone numbers")
@@ -153,7 +158,7 @@ export class SettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Excluded keys)")
+			.setName("Excluded keys")
 			.setDesc(
 				"A space delimited list of all the keys that should be excluded in the properties of each contact. The data will still be pressent under the iCloudVCard propertie",
 			)

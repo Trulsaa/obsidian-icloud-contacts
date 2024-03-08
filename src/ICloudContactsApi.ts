@@ -112,6 +112,14 @@ export default class ICloudContactsApi {
 	}
 
 	async updateContacts(options = { rewriteAll: false }) {
+		const haveSettingsChanged =
+			this.settings.previousUpdateSettings &&
+			!this.isSameSettings(
+				this.settings,
+				this.settings.previousUpdateSettings,
+			);
+		if (haveSettingsChanged) options.rewriteAll = true;
+
 		try {
 			const startNotice = this.showNotice(
 				`${pluginName}: Updating contacts...`,
@@ -128,20 +136,45 @@ export default class ICloudContactsApi {
 				this.settings.folder,
 			);
 
+			const previousUpdateData = this.settings.previousUpdateData || [];
+
 			for (const iCloudVCard of iCloudVCards) {
-				await this.processVCard(existingContacts, iCloudVCard, options);
+				const previousUpdateVCard = previousUpdateData.find(
+					(vCard) => vCard.url === iCloudVCard.url,
+				);
+				const existingContactFrontmatter = existingContacts.find(
+					(c) => c[iCloudVCardPropertieName].url === iCloudVCard.url,
+				);
+
+				await this.processVCard(
+					iCloudVCard,
+					previousUpdateVCard,
+					existingContactFrontmatter,
+					options,
+				);
 			}
 
 			await this.moveDeletedContacts(existingContacts, iCloudVCards);
 
 			startNotice.hide();
-			this.reportHappenings();
+			this.reportHappenings(haveSettingsChanged);
+
+			const usedSettings = { ...this.settings };
+			delete usedSettings.previousUpdateData;
+			this.settings.previousUpdateSettings = usedSettings;
+
+			return [
+				...this.newContacts,
+				...this.modifiedContacts,
+				...this.skippedContacts,
+			];
 		} catch (e) {
 			console.error(e);
 			this.handleError("Error when running updateContacts", e, {
 				options,
 			});
 		}
+		return [];
 	}
 
 	private validateSettings() {
@@ -156,15 +189,12 @@ export default class ICloudContactsApi {
 	}
 
 	private async processVCard(
-		existingFrontmatter: Properties[],
 		iCloudVCard: ICloudVCard,
+		previousVCard: ICloudVCard | undefined,
+		existingContactFrontmatter: Properties | undefined,
 		options: { rewriteAll: boolean },
 	) {
 		try {
-			const existingContactFrontmatter = this.getExistingContact(
-				existingFrontmatter,
-				iCloudVCard,
-			);
 			if (existingContactFrontmatter) {
 				const isModified = this.isModified(
 					existingContactFrontmatter,
@@ -174,21 +204,23 @@ export default class ICloudContactsApi {
 					await this.updateContactFile(
 						iCloudVCard,
 						existingContactFrontmatter,
+						previousVCard,
 					);
 					this.modifiedContacts.push(iCloudVCard);
 				} else {
 					this.skippedContacts.push(iCloudVCard);
 				}
-			} else {
-				await this.createContactFile(iCloudVCard);
-				this.newContacts.push(iCloudVCard);
+				return;
 			}
+
+			await this.createContactFile(iCloudVCard);
+			this.newContacts.push(iCloudVCard);
 		} catch (e) {
 			this.handleError("Error trying to process contact", e, iCloudVCard);
 		}
 	}
 
-	private reportHappenings() {
+	private reportHappenings(haveSettingsChanged: boolean) {
 		let noticeText = pluginName + ":\n";
 		if (this.newContacts.length > 0)
 			noticeText += `Created ${this.newContacts.length}\n`;
@@ -198,6 +230,8 @@ export default class ICloudContactsApi {
 			noticeText += `Deleted ${this.deletedContacts.length}\n`;
 		if (this.skippedContacts.length > 0)
 			noticeText += `Skipped ${this.skippedContacts.length}\n`;
+		if (haveSettingsChanged)
+			noticeText += "All contacts where updated to reflect new settings";
 		this.showNotice(noticeText, 7000);
 		console.log(pluginName, {
 			newContacts: this.newContacts,
@@ -205,10 +239,6 @@ export default class ICloudContactsApi {
 			deletedContacts: this.deletedContacts,
 			skippedContacts: this.skippedContacts,
 		});
-		this.newContacts = [];
-		this.modifiedContacts = [];
-		this.deletedContacts = [];
-		this.skippedContacts = [];
 	}
 
 	private async moveDeletedContacts(
@@ -261,40 +291,24 @@ export default class ICloudContactsApi {
 		);
 	}
 
-	private getExistingContact(
-		existingFrontmatter: Properties[],
-		iCloudVCard: ICloudVCard,
-	) {
-		return existingFrontmatter.find(
-			(c) => c[iCloudVCardPropertieName].url === iCloudVCard.url,
-		);
-	}
-
 	private async updateContactFile(
 		iCloudVCard: ICloudVCard,
 		existingFrontmatter: Properties,
+		previousVCard: ICloudVCard | undefined,
 	) {
 		const newFullName = getFullName(iCloudVCard.data);
-		if (!existingFrontmatter[iCloudVCardPropertieName].data) {
-			throw new Error(
-				`existingContact.properties[${iCloudVCardPropertieName}].data is missing`,
-			);
-		}
-		const existingContactFullName = getFullName(
-			existingFrontmatter[iCloudVCardPropertieName].data,
-		);
 
-		const contactFile = this.getContactFile(existingContactFullName);
+		const contactFile = this.getContactFile(existingFrontmatter.name);
 		if (!contactFile) {
 			throw new Error("contactFile not found");
 		}
 
-		const isFullNameModified = existingContactFullName !== newFullName;
+		const isFullNameModified = existingFrontmatter.name !== newFullName;
 		if (isFullNameModified) {
-			await this.renameContactFile(existingContactFullName, newFullName);
+			await this.renameContactFile(existingFrontmatter.name, newFullName);
 			await this.app.vault.process(contactFile, (data) => {
 				return data.replace(
-					`# ${existingContactFullName}`,
+					`# ${existingFrontmatter.name}`,
 					`# ${newFullName}`,
 				);
 			});
@@ -307,21 +321,24 @@ export default class ICloudContactsApi {
 			this.settings,
 		);
 
+		const previousData = previousVCard
+			? previousVCard.data
+			: existingFrontmatter[iCloudVCardPropertieName].data;
 		const prevFrontMatter = createFrontmatter(
-			parseVCard(
-				existingFrontmatter[iCloudVCardPropertieName].data,
-			) as VCards[],
-			existingContactFullName,
-			this.settings,
+			parseVCard(previousData) as VCards[],
+			getFullName(previousData),
+			this.settings.previousUpdateSettings || this.settings,
 		);
 
 		await this.app.fileManager.processFrontMatter(
 			contactFile,
 			(fileFrontmatter) => {
-				for (const [key] of Object.entries(prevFrontMatter)) {
-					// If the kay exists in prev but not in new delete it
-					if (!newFrontMatter[key]) {
-						delete fileFrontmatter[key];
+				if (prevFrontMatter) {
+					for (const [key] of Object.entries(prevFrontMatter)) {
+						// If the kay exists in prev but not in new delete it
+						if (!newFrontMatter[key]) {
+							delete fileFrontmatter[key];
+						}
 					}
 				}
 				for (const [key, value] of Object.entries(newFrontMatter)) {
@@ -428,6 +445,20 @@ export default class ICloudContactsApi {
 				{ folderPath },
 			);
 		}
+	}
+
+	private isSameSettings(
+		a: ICloudContactsSettings,
+		b: ICloudContactsSettings,
+	) {
+		const result = Object.entries(a)
+			.filter(
+				([key]) =>
+					key !== "previousUpdateSettings" &&
+					key !== "previousUpdateData",
+			)
+			.every(([key, value]) => value == b[key]);
+		return result;
 	}
 
 	private async createErrorFile() {

@@ -99,7 +99,7 @@ export class MockNotice {
 const mockFetchContacts =
 	jest.fn<(username: string, password: string) => Promise<ICloudVCard[]>>();
 
-export const DEFAULT_SETTINGS: ICloudContactsSettings = {
+const MOCK_DEFAULT_SETTINGS: ICloudContactsSettings = {
 	username: "username",
 	password: "password",
 	folder: "Contacts",
@@ -109,6 +109,22 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	relatedLabels: false,
 	excludedKeys:
 		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality",
+	settingsChanged: false,
+	previousUpdateSettings: {
+		username: "username",
+		password: "password",
+		folder: "Contacts",
+		telLabels: false,
+		emailLabels: false,
+		urlLabels: false,
+		relatedLabels: false,
+		excludedKeys:
+			"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality",
+		settingsChanged: false,
+		previousUpdateSettings: undefined,
+		previousUpdateData: [],
+	},
+	previousUpdateData: [],
 };
 
 const mockListedFiles = {
@@ -129,11 +145,11 @@ describe("updateContacts", () => {
 
 		const api = new ICloudContactsApi(
 			mockObsidianApi,
-			DEFAULT_SETTINGS,
+			MOCK_DEFAULT_SETTINGS,
 			mockFetchContacts,
 			mockNoticeShower,
 		);
-		expect(api.updateContacts()).resolves.toBeUndefined();
+		expect(api.updateContacts()).resolves.toEqual([]);
 	});
 
 	test("Should write error to error file if fetchContacts rejects", async () => {
@@ -147,7 +163,7 @@ describe("updateContacts", () => {
 
 		const api = new ICloudContactsApi(
 			mockObsidianApi,
-			DEFAULT_SETTINGS,
+			MOCK_DEFAULT_SETTINGS,
 			mockFetchContacts,
 			mockNoticeShower,
 		);
@@ -169,7 +185,7 @@ describe("updateContacts", () => {
 
 		const api = new ICloudContactsApi(
 			mockObsidianApi,
-			DEFAULT_SETTINGS,
+			MOCK_DEFAULT_SETTINGS,
 			mockFetchContacts,
 			mockNoticeShower,
 		);
@@ -218,7 +234,7 @@ describe("updateContacts", () => {
 
 		const api = new ICloudContactsApi(
 			mockObsidianApi,
-			DEFAULT_SETTINGS,
+			MOCK_DEFAULT_SETTINGS,
 			mockFetchContacts,
 			mockNoticeShower,
 		);
@@ -274,7 +290,7 @@ describe("updateContacts", () => {
 
 		const api = new ICloudContactsApi(
 			mockObsidianApi,
-			DEFAULT_SETTINGS,
+			MOCK_DEFAULT_SETTINGS,
 			mockFetchContacts,
 			mockNoticeShower,
 		);
@@ -291,6 +307,51 @@ describe("updateContacts", () => {
 
 		expect(mockObsidianApi.app.vault.process).toHaveBeenCalledTimes(1);
 		expect(newFileContent).toEqual("# Testesen Nordmann");
+	});
+
+	test("Adding a key to Excluded keys should remove the key from existing contacts", async () => {
+		const mockFrontMatter = {
+			propertyToNotTouch: "value",
+			name: "Test Nordmann",
+			email: ["test@test.test"],
+			telephone: ["87654321"],
+			iCloudVCard: JSON.stringify(testVCard),
+		};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => {
+				fn(mockFrontMatter);
+			},
+		);
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [],
+		});
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
+			frontmatter: mockFrontMatter,
+		});
+
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+
+		const mockSettings = {
+			...MOCK_DEFAULT_SETTINGS,
+			excludedKeys:
+				"email n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality",
+		};
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			mockSettings,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+
+		expect(mockFrontMatter).toEqual({
+			propertyToNotTouch: "value",
+			name: "Test Nordmann",
+			telephone: ["87654321"],
+			iCloudVCard: JSON.stringify(testVCard),
+		});
 	});
 
 	test("Should handle all types of characters in name", async () => {});

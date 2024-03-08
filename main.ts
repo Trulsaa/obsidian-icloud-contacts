@@ -104,13 +104,23 @@ export default class ICloudContacts extends Plugin {
 		this.addCommand({
 			id: "update-contacts",
 			name: "Update Contacts",
-			callback: () => this.api.updateContacts(),
+			callback: async () => {
+				this.settings.previousUpdateData =
+					await this.api.updateContacts();
+				await this.saveSettings();
+			},
 		});
 
 		this.addCommand({
 			id: "update-all-contacts",
 			name: "Update all Contacts",
-			callback: () => this.api.updateContacts({ rewriteAll: true }),
+			callback: async () => {
+				this.settings.previousUpdateData =
+					await this.api.updateContacts({
+						rewriteAll: true,
+					});
+				await this.saveSettings();
+			},
 		});
 
 		this.addRibbonIcon("sync", "Update Contacts", () =>
