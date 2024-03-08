@@ -30,7 +30,7 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	urlLabels: false,
 	relatedLabels: false,
 	excludedKeys:
-		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality",
+		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality vnd63SensitiveContentConfig",
 };
 
 export class SettingTab extends PluginSettingTab {
