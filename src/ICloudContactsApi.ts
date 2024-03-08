@@ -119,12 +119,12 @@ export default class ICloudContactsApi {
 				this.settings.previousUpdateSettings,
 			);
 		if (haveSettingsChanged) options.rewriteAll = true;
+		const startNotice = this.showNotice(
+			`${pluginName}: Updating contacts...`,
+			0,
+		);
 
 		try {
-			const startNotice = this.showNotice(
-				`${pluginName}: Updating contacts...`,
-				0,
-			);
 			this.validateSettings();
 			await this.getCreateFolder(this.settings.folder);
 			const iCloudVCards = await this.fetchContacts(
@@ -155,26 +155,29 @@ export default class ICloudContactsApi {
 			}
 
 			await this.moveDeletedContacts(existingContacts, iCloudVCards);
-
-			startNotice.hide();
-			this.reportHappenings(haveSettingsChanged);
-
-			const usedSettings = { ...this.settings };
-			delete usedSettings.previousUpdateData;
-			this.settings.previousUpdateSettings = usedSettings;
-
-			return [
-				...this.newContacts,
-				...this.modifiedContacts,
-				...this.skippedContacts,
-			];
 		} catch (e) {
 			console.error(e);
 			this.handleError("Error when running updateContacts", e, {
 				options,
 			});
 		}
-		return [];
+		const usedSettings = { ...this.settings };
+
+		const updateData = [
+			...this.newContacts,
+			...this.modifiedContacts,
+			...this.skippedContacts,
+		];
+
+		startNotice.hide();
+		this.reportHappenings(haveSettingsChanged);
+
+		this.newContacts = [];
+		this.modifiedContacts = [];
+		this.deletedContacts = [];
+		this.skippedContacts = [];
+
+		return { updateData, usedSettings };
 	}
 
 	private validateSettings() {

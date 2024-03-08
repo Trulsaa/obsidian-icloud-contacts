@@ -149,7 +149,7 @@ describe("updateContacts", () => {
 			mockFetchContacts,
 			mockNoticeShower,
 		);
-		expect(api.updateContacts()).resolves.toEqual([]);
+		expect(api.updateContacts()).resolves.not.toThrow();
 	});
 
 	test("Should write error to error file if fetchContacts rejects", async () => {

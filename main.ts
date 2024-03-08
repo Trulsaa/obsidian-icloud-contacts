@@ -105,8 +105,11 @@ export default class ICloudContacts extends Plugin {
 			id: "update-contacts",
 			name: "Update Contacts",
 			callback: async () => {
-				this.settings.previousUpdateData =
+				const { updateData, usedSettings } =
 					await this.api.updateContacts();
+				this.settings.previousUpdateData = updateData;
+				delete usedSettings.previousUpdateData;
+				this.settings.previousUpdateSettings = usedSettings;
 				await this.saveSettings();
 			},
 		});
@@ -115,10 +118,13 @@ export default class ICloudContacts extends Plugin {
 			id: "update-all-contacts",
 			name: "Update all Contacts",
 			callback: async () => {
-				this.settings.previousUpdateData =
+				const { updateData, usedSettings } =
 					await this.api.updateContacts({
 						rewriteAll: true,
 					});
+				this.settings.previousUpdateData = updateData;
+				delete usedSettings.previousUpdateData;
+				this.settings.previousUpdateSettings = usedSettings;
 				await this.saveSettings();
 			},
 		});
