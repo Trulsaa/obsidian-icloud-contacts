@@ -8,6 +8,7 @@ import {
 	normalizePath,
 } from "obsidian";
 import ICloudContactsApi, {
+	ICloudVCard,
 	OnlyRequiredFromObsidianApi,
 } from "src/ICloudContactsApi";
 import { fetchContacts } from "src/iCloudClient";
@@ -107,10 +108,7 @@ export default class ICloudContacts extends Plugin {
 			callback: async () => {
 				const { updateData, usedSettings } =
 					await this.api.updateContacts();
-				this.settings.previousUpdateData = updateData;
-				delete usedSettings.previousUpdateData;
-				this.settings.previousUpdateSettings = usedSettings;
-				await this.saveSettings();
+				await this.saveRunData(updateData, usedSettings);
 			},
 		});
 
@@ -122,10 +120,7 @@ export default class ICloudContacts extends Plugin {
 					await this.api.updateContacts({
 						rewriteAll: true,
 					});
-				this.settings.previousUpdateData = updateData;
-				delete usedSettings.previousUpdateData;
-				this.settings.previousUpdateSettings = usedSettings;
-				await this.saveSettings();
+				await this.saveRunData(updateData, usedSettings);
 			},
 		});
 
@@ -135,6 +130,17 @@ export default class ICloudContacts extends Plugin {
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SettingTab(this.app, this));
+	}
+
+	private async saveRunData(
+		updateData: ICloudVCard[],
+		usedSettings: ICloudContactsSettings,
+	) {
+		this.settings.previousUpdateData = updateData;
+		delete usedSettings.previousUpdateData;
+		delete usedSettings.previousUpdateSettings;
+		this.settings.previousUpdateSettings = usedSettings;
+		await this.saveSettings();
 	}
 
 	onunload() {}
