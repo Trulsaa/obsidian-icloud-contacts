@@ -9,7 +9,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout source
-              uses: actions/checkout@v2
+              uses: actions/checkout@v4
 
             - name: Install NPM dependencies
               run: npm ci
@@ -23,7 +23,7 @@ jobs:
             - name: Release
               uses: softprops/action-gh-release@v2
               with:
-                  name: Release ${{ github.ref.name }}
+                  name: Release ${{ github.ref_name }}
                   files: |
                       main.js
                       manifest.json
