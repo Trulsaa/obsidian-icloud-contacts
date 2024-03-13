@@ -222,7 +222,7 @@ describe("updateContacts", () => {
 			folders: [],
 		});
 		mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
-			frontmatter: mockFrontMatter,
+			frontmatter: { ...mockFrontMatter },
 		});
 
 		const updatedTestVCard = {
@@ -250,7 +250,7 @@ describe("updateContacts", () => {
 		});
 	});
 
-	test("Should rename contact file and update header if contact name has been updated", async () => {
+	test.only("Should rename contact file and update header if contact name has been updated", async () => {
 		const mockFrontMatter = {
 			name: "Test Nordmann",
 			email: ["test@test.test"],
@@ -267,7 +267,7 @@ describe("updateContacts", () => {
 			folders: [],
 		});
 		mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
-			frontmatter: mockFrontMatter,
+			frontmatter: { ...mockFrontMatter },
 		});
 		let newFileContent = "";
 		mockObsidianApi.app.vault.process.mockImplementationOnce(
@@ -327,7 +327,7 @@ describe("updateContacts", () => {
 			folders: [],
 		});
 		mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
-			frontmatter: mockFrontMatter,
+			frontmatter: { ...mockFrontMatter },
 		});
 
 		mockFetchContacts.mockResolvedValueOnce([testVCard]);
