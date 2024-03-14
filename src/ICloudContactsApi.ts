@@ -277,12 +277,14 @@ export default class ICloudContactsApi {
 		path: string;
 	}) {
 		try {
-			await this.renameContactFile(
+			const contactFile = this.app.vault.getFileByPath(
 				deletedContact.path,
-				deletedFolder +
-					deletedContact.path
-						.replace(this.settings.folder, "")
-						.replace(".md", ""),
+			);
+			if (!contactFile)
+				throw new Error(deletedContact.path + " not found");
+			await this.app.fileManager.renameFile(
+				contactFile,
+				`${this.settings.folder}/${deletedFolder}/${contactFile.name}`,
 			);
 		} catch (e) {
 			this.handleError(
@@ -320,7 +322,12 @@ export default class ICloudContactsApi {
 		const isFullNameModified =
 			existingContact.frontmatter.name !== newFullName;
 		if (isFullNameModified) {
-			await this.renameContactFile(existingContact.path, newFullName);
+			await this.app.fileManager.renameFile(
+				contactFile,
+				this.normalizePath(
+					this.settings.folder + "/" + newFullName + ".md",
+				),
+			);
 			await this.app.vault.process(contactFile, (data) => {
 				return data.replace(
 					`# ${existingContact.frontmatter.name}`,
@@ -388,21 +395,6 @@ export default class ICloudContactsApi {
 			}
 			fm[iCloudVCardPropertieName] = JSON.stringify(iCloudVCard);
 		});
-	}
-
-	private async renameContactFile(
-		existingContactFilePath: string,
-		fullName: string | string[],
-	) {
-		const contactFile = this.app.vault.getFileByPath(
-			existingContactFilePath,
-		);
-		if (!contactFile)
-			throw new Error(existingContactFilePath + " not found");
-		await this.app.fileManager.renameFile(
-			contactFile,
-			this.normalizePath(this.settings.folder + "/" + fullName + ".md"),
-		);
 	}
 
 	private async getAllCurrentContacts(folder: string) {
