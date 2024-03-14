@@ -12,6 +12,7 @@
     "isolatedModules": true,
 	"strictNullChecks": true,
 	"esModuleInterop": true,
+	"skipLibCheck": true,
     "lib": [
       "DOM",
       "ES5",
