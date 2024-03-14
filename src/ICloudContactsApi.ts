@@ -1,7 +1,5 @@
 import { ICloudContactsSettings } from "./SettingTab";
-import { VCards } from "./VCards";
 import { createFrontmatter } from "./frontMatter";
-import { getFullName, parseVCard } from "./parser";
 
 export type ICloudVCard = {
 	url: string;
@@ -318,7 +316,10 @@ export default class ICloudContactsApi {
 		existingContact: { frontmatter: Properties; path: string },
 		previousVCard: ICloudVCard | undefined,
 	) {
-		const newFullName = getFullName(iCloudVCard.data);
+		const newFrontMatter = createFrontmatter(
+			iCloudVCard.data,
+			this.settings,
+		);
 
 		const contactFile = this.app.vault.getFileByPath(existingContact.path);
 		if (!contactFile) {
@@ -326,35 +327,27 @@ export default class ICloudContactsApi {
 		}
 
 		const isFullNameModified =
-			existingContact.frontmatter.name !== newFullName;
+			existingContact.frontmatter.name !== newFrontMatter.name;
 		if (isFullNameModified) {
 			await this.app.fileManager.renameFile(
 				contactFile,
 				this.normalizePath(
-					this.settings.folder + "/" + newFullName + ".md",
+					this.settings.folder + "/" + newFrontMatter.name + ".md",
 				),
 			);
 			await this.app.vault.process(contactFile, (data) => {
 				return data.replace(
 					`# ${existingContact.frontmatter.name}`,
-					`# ${newFullName}`,
+					`# ${newFrontMatter.name}`,
 				);
 			});
 		}
-
-		const parsedVCard = parseVCard(iCloudVCard.data);
-		const newFrontMatter = createFrontmatter(
-			parsedVCard as VCards[],
-			newFullName,
-			this.settings,
-		);
 
 		const previousData = previousVCard
 			? previousVCard.data
 			: existingContact.frontmatter[iCloudVCardPropertieName].data;
 		const prevFrontMatter = createFrontmatter(
-			parseVCard(previousData) as VCards[],
-			getFullName(previousData),
+			previousData,
 			this.settings.previousUpdateSettings || this.settings,
 		);
 
@@ -383,17 +376,11 @@ export default class ICloudContactsApi {
 			throw new Error("iCloudVCard.data is undefined");
 		}
 
-		const parsedVCards = parseVCard(iCloudVCard.data);
-		const fullName = getFullName(iCloudVCard.data);
-		const frontMatter = createFrontmatter(
-			parsedVCards as VCards[],
-			fullName,
-			this.settings,
-		);
-		const filePath = `${this.settings.folder}/${fullName}.md`;
+		const frontMatter = createFrontmatter(iCloudVCard.data, this.settings);
+		const filePath = `${this.settings.folder}/${frontMatter.name}.md`;
 		const newFile = await this.app.vault.create(
 			this.normalizePath(filePath.replace(/\\/g, "")),
-			`# ${fullName}`,
+			`# ${frontMatter.name}`,
 		);
 		await this.app.fileManager.processFrontMatter(newFile, (fm) => {
 			for (const [key, value] of Object.entries(frontMatter)) {

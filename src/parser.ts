@@ -1,13 +1,24 @@
 import { parse as vcfParse } from "vcf";
 
-export type ParsedVCard = {
+export type JCard = {
 	key: string;
 	meta: { [key: string]: string | string[] };
 	type: string;
 	value: string | string[];
-};
+}[];
 
-export function parseVCard(vcardString: string): ParsedVCard[] {
+export function parseVCardToJCardAndFullName(vcardString: string): {
+	jCard: JCard;
+	fullName: string;
+} {
+	const jCard = parseVCardToJCard(vcardString);
+	return {
+		jCard,
+		fullName: getFullName(jCard),
+	};
+}
+
+export function parseVCardToJCard(vcardString: string): JCard {
 	const jCard = vcfParse(vcardString)[0].toJSON();
 
 	return jCard[1].map((item) => {
@@ -23,22 +34,25 @@ export function parseVCard(vcardString: string): ParsedVCard[] {
 	});
 }
 
-export function getFullName(vCardString: string): string {
-	const parsedVCard = parseVCard(vCardString);
-	const fullName = parsedVCard.find(({ key }) => key === "fn");
+export function getFullNameFromVCard(vcardString: string): string {
+	return getFullName(parseVCardToJCard(vcardString));
+}
+
+function getFullName(jCard: JCard): string {
+	const fullName = jCard.find(({ key }) => key === "fn");
 	if (fullName && fullName.value) {
 		return (fullName.value as string).replace(/\\/g, "");
 	}
 
 	const isOrg =
-		parsedVCard.find(({ key }) => key === "xAbShowAs")?.value === "COMPANY";
+		jCard.find(({ key }) => key === "xAbShowAs")?.value === "COMPANY";
 	if (isOrg) {
 		return (
-			parsedVCard.find(({ key }) => key === "org")?.value as string[]
+			jCard.find(({ key }) => key === "org")?.value as string[]
 		)[0].replace(/\\/g, "");
 	}
 
-	const name = parsedVCard.find(({ key }) => key === "n");
+	const name = jCard.find(({ key }) => key === "n");
 	if (!name) throw new Error("Unable to get full name");
 	return convertNameToFullName(name.value as string[]).replace(/\\/g, "");
 }

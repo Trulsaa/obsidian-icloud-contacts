@@ -1,6 +1,25 @@
 import { VCards } from "./VCards";
+import { parseVCardToJCardAndFullName } from "./parser";
 
 export function createFrontmatter(
+	iCloudVCardData: string,
+	settings: {
+		telLabels: boolean;
+		emailLabels: boolean;
+		urlLabels: boolean;
+		relatedLabels: boolean;
+		excludedKeys: string;
+	},
+) {
+	const { jCard, fullName } = parseVCardToJCardAndFullName(iCloudVCardData);
+	return createFrontmatterFromParsedVCard(
+		jCard as VCards[],
+		fullName,
+		settings,
+	);
+}
+
+export function createFrontmatterFromParsedVCard(
 	parsedVCards: VCards[],
 	fullName: string,
 	{

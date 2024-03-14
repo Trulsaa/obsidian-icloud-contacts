@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { createFrontmatter } from "./frontMatter";
+import { createFrontmatterFromParsedVCard } from "./frontMatter";
 
 const defaultSettings = {
 	telLabels: false,
@@ -689,7 +689,7 @@ describe("createFrontmatter", () => {
 				},
 			) => {
 				expect(
-					createFrontmatter(parsedVCard, "Full Name", settings),
+					createFrontmatterFromParsedVCard(parsedVCard, "Full Name", settings),
 				).toEqual(expected);
 			},
 		);

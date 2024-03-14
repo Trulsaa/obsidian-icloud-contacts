@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { getFullName, parseVCard } from "./parser";
+import { getFullNameFromVCard, parseVCardToJCard } from "./parser";
 import { VCards } from "./VCards";
 
 function padVCard(vCardString: string) {
@@ -478,7 +478,7 @@ const parseVCardTestCases = [
 	return [vCardString, expected];
 });
 
-const getFullNameTestCases = [
+const getFullNameFromVCardTestCases = [
 	["ORG:Belhaven;\r\nX-ABShowAs:COMPANY", "Belhaven"],
 	["FN:\r\nN:Tomsen;Tom;;;", "Tom Tomsen"],
 	["N:Tomsen;Tom;;;\r\nFN:Tom Tomsen", "Tom Tomsen"],
@@ -497,11 +497,11 @@ const getFullNameTestCases = [
 ];
 
 describe("parser", () => {
-	describe("parseVCard", () => {
+	describe("parseVCardToJCard", () => {
 		test.each(parseVCardTestCases)(
 			"Should parse %s",
 			(vCardString: string, expected: VCards[]) => {
-				expect(parseVCard(padVCard(vCardString))).toEqual([
+				expect(parseVCardToJCard(padVCard(vCardString))).toEqual([
 					{ key: "version", meta: {}, type: "text", value: "3.0" },
 					...expected,
 				]);
@@ -509,11 +509,13 @@ describe("parser", () => {
 		);
 	});
 
-	describe("getFullName", () => {
-		test.each(getFullNameTestCases)(
+	describe("getFullNameFromVCard", () => {
+		test.each(getFullNameFromVCardTestCases)(
 			"Should get fullname from %s",
 			(vCardString: string, expected: string) => {
-				expect(getFullName(padVCard(vCardString))).toEqual(expected);
+				expect(getFullNameFromVCard(padVCard(vCardString))).toEqual(
+					expected,
+				);
 			},
 		);
 	});
