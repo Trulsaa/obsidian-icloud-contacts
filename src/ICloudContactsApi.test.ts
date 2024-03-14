@@ -354,7 +354,7 @@ describe("updateContacts", () => {
 		});
 	});
 
-	test("Should rename contact file and update header if contact name has been updated", async () => {
+	test("Should create contact file with a new unique name when a contact file with the same contact name exists", async () => {
 		const mockFrontMatter = {
 			name: "Test Nordmann",
 			email: ["test@test.test"],
@@ -379,7 +379,6 @@ describe("updateContacts", () => {
 		mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
 			frontmatter: { ...mockFrontMatter },
 		});
-		mockObsidianApi.app.vault.process;
 		mockFetchContacts.mockResolvedValueOnce([testVCard, sameNameTestVCard]);
 
 		const api = new ICloudContactsApi(
@@ -407,6 +406,89 @@ describe("updateContacts", () => {
 			iCloudVCard: JSON.stringify(sameNameTestVCard),
 		});
 	});
+
+	test("Should rename contact file with a new unique name when a contact file with the same contact name exists", async () => {
+		const mockFrontMatter = {
+			name: "Test Nordmann",
+			email: ["test@test.test"],
+			telephone: ["87654321"],
+			iCloudVCard: testVCard,
+		};
+		const toBecomeSameNameTestVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/tobecomesamenametestvcard.vcf",
+			etag: '"tobecomesamenametestvcard"',
+			data: "BEGIN:VCARD\r\nVERSION:3.0\r\nPRODID:-//Apple Inc.//macOS 14.2.1//EN\r\nN:Nordmann;Ola;;;\r\nFN:Ola Nordmann\r\nEMAIL;type=INTERNET;type=HOME;type=pref:testnordmann@test.test\r\nTEL;type=pref:12345678\r\nREV:2024-02-28T22:04:34Z\r\nUID:samenametestvcard\r\nEND:VCARD",
+		};
+		const toBecomeSameNameMockFrontMatter = {
+			name: "Ola Nordmann",
+			email: ["test@test.test"],
+			telephone: ["87654321"],
+			iCloudVCard: toBecomeSameNameTestVCard,
+		};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => {
+				fn(toBecomeSameNameMockFrontMatter);
+			},
+		);
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md", "Contacts/Ola Nordmann.md"],
+			folders: [],
+		});
+		mockObsidianApi.app.metadataCache.getCache.mockImplementation(
+			(path: string) => {
+				if (path === "Contacts/Test Nordmann.md") {
+					return { frontmatter: { ...mockFrontMatter } };
+				}
+				if (path === "Contacts/Ola Nordmann.md") {
+					return {
+						frontmatter: { ...toBecomeSameNameMockFrontMatter },
+					};
+				}
+				return null;
+			},
+		);
+		const sameNameTestVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/tobecomesamenametestvcard.vcf",
+			etag: '"samenametestvcard"',
+			data: "BEGIN:VCARD\r\nVERSION:3.0\r\nPRODID:-//Apple Inc.//macOS 14.2.1//EN\r\nN:Nordmann;Test;;;\r\nFN:Test Nordmann\r\nEMAIL;type=INTERNET;type=HOME;type=pref:testnordmann@test.test\r\nTEL;type=pref:12345678\r\nREV:2024-02-28T22:04:34Z\r\nUID:samenametestvcard\r\nEND:VCARD",
+		};
+		mockFetchContacts.mockResolvedValueOnce([testVCard, sameNameTestVCard]);
+
+		mockObsidianApi.app.vault.getFileByPath.mockImplementation(
+			(path: string) => {
+				if (path === "Contacts/Test Nordmann.md")
+					return "TFile " + path;
+				if (path === "Contacts/Ola Nordmann.md") return "TFile " + path;
+			},
+		);
+
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			MOCK_DEFAULT_SETTINGS,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+
+		expect(mockObsidianApi.app.vault.process).toHaveBeenCalledTimes(1);
+		expect(
+			mockObsidianApi.app.fileManager.renameFile,
+		).toHaveBeenCalledTimes(1);
+		expect(mockObsidianApi.app.fileManager.renameFile).toHaveBeenCalledWith(
+			"TFile Contacts/Ola Nordmann.md",
+			"Contacts/Test Nordmann 2.md",
+		);
+		expect(mockObsidianApi.app.vault.create).not.toHaveBeenCalled();
+		expect(toBecomeSameNameMockFrontMatter).toEqual({
+			name: "Test Nordmann",
+			email: ["testnordmann@test.test"],
+			telephone: ["12345678"],
+			iCloudVCard: JSON.stringify(sameNameTestVCard),
+		});
+	});
+
+	test("Should move contact file to deleted folder with a new unique name when a contact file in the delted folder with the same contact name exists", async () => {});
 
 	test("Should handle all types of characters in name", async () => {});
 });
