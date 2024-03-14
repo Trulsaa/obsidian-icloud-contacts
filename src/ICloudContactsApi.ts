@@ -33,7 +33,6 @@ type TAbstractFile = {
 type Vault = {
 	adapter: {
 		list: (normalizedPath: string) => Promise<ListedFiles>;
-		write: (normalizedPath: string, data: string) => Promise<void>;
 	};
 	append: (file: TFile, data: string) => Promise<void>;
 	create: (path: string, data: string) => Promise<TFile>;

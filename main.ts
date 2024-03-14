@@ -44,11 +44,6 @@ function createObsidianApiWrapper(app: App): OnlyRequiredFromObsidianApi {
 				adapter: {
 					list: (normalizedPath: string) =>
 						app.vault.adapter.list(normalizedPath),
-					write: (
-						normalizedPath: string,
-						data: string,
-						_options?: DataWriteOptions,
-					) => app.vault.adapter.write(normalizedPath, data),
 				},
 				append: (
 					file: TFile,

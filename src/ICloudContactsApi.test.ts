@@ -32,14 +32,7 @@ const mockObsidianApi = {
 					(
 						normalizedPath: string,
 					) => Promise<{ files: string[]; folders: string[] }>
-				>(async (normalizedPath: string) => mockListedFiles),
-				write: jest.fn<
-					(
-						normalizedPath: string,
-						data: string,
-						options?: any,
-					) => Promise<void>
-				>(),
+				>(async (_normalizedPath: string) => mockListedFiles),
 			},
 			append: jest.fn<
 				(file: any, data: string, options?: any) => Promise<void>
