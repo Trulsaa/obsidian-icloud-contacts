@@ -191,6 +191,15 @@ export default class ICloudContactsApi {
 				"ICloud app specific password is required in settings",
 			);
 		}
+		if (!this.settings.folder) {
+			throw new Error("Folder is required in settings");
+		}
+		const normalizedFolderPath = this.normalizePath(this.settings.folder);
+		if (this.settings.folder !== normalizedFolderPath) {
+			throw new Error(
+				`Folder "${this.settings.folder}" is not valid, How about using "${normalizedFolderPath}"`,
+			);
+		}
 	}
 
 	private async processVCard(
