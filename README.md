@@ -25,7 +25,7 @@ This plugin provides functions to sync contacts from your iCloud account to a fo
 
 1. Install this plugin
 2. Add username and app specific password to the settings.
-3. Run the command `Obsidian iCloud contacts: Update contacts` to sync your contacts
+3. Run the command `iCloud contacts: Update contacts` to sync your contacts
 4. After syncing is complete, you will see a notification stating how many Contacts have been synced.
 
 Now that you have a folder with all your contacts you can link all your projects to their participants. All your vacation plans to your travel partners. All your meeting notes to the participants.
@@ -52,7 +52,7 @@ WHERE birthday.day = number(split(this.file.name, "-")[2]) AND birthday.month = 
 
 ## Commands
 
-This plugin provides two commands. Use the command pallet to search for **Obsidian iCloud contacts** and use one of the two commands to update your contacts folder.
+This plugin provides two commands. Use the command pallet to search for **iCloud contacts** and use one of the two commands to update your contacts folder.
 
 1. **Update Contacts**: Downloads all contacts from iCloud and updates the contacts files in you vault that based what contacts have been updated in iCloud.
 2. **Update all Contacts**: - Downloads alle contacts form iCloud and rewrites all contacts files in your vault based on the contacts from iCloud. Usefull for when you have changed the Excluded keys setting.
