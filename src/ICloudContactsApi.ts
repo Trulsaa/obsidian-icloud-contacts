@@ -31,6 +31,7 @@ type TAbstractFile = {
 type Vault = {
 	adapter: {
 		list: (normalizedPath: string) => Promise<ListedFiles>;
+		exists: (path: string, sensitive?: boolean) => Promise<boolean>;
 	};
 	append: (file: TFile, data: string) => Promise<void>;
 	create: (path: string, data: string) => Promise<TFile>;
@@ -329,11 +330,12 @@ export default class ICloudContactsApi {
 		const isFullNameModified =
 			existingContact.frontmatter.name !== newFrontMatter.name;
 		if (isFullNameModified) {
+			const uniqueFilePath = await this.createUniqeContactFilePath(
+				newFrontMatter.name as string,
+			);
 			await this.app.fileManager.renameFile(
 				contactFile,
-				this.normalizePath(
-					this.settings.folder + "/" + newFrontMatter.name + ".md",
-				),
+				this.normalizePath(uniqueFilePath),
 			);
 			await this.app.vault.process(contactFile, (data) => {
 				return data.replace(
@@ -377,7 +379,11 @@ export default class ICloudContactsApi {
 		}
 
 		const frontMatter = createFrontmatter(iCloudVCard.data, this.settings);
-		const filePath = `${this.settings.folder}/${frontMatter.name}.md`;
+
+		let filePath = await this.createUniqeContactFilePath(
+			frontMatter.name as string,
+		);
+
 		const newFile = await this.app.vault.create(
 			this.normalizePath(filePath.replace(/\\/g, "")),
 			`# ${frontMatter.name}`,
@@ -388,6 +394,20 @@ export default class ICloudContactsApi {
 			}
 			fm[iCloudVCardPropertieName] = JSON.stringify(iCloudVCard);
 		});
+	}
+
+	private async createUniqeContactFilePath(name: string) {
+		let filePath = `${this.settings.folder}/${name}.md`;
+		let i = 2;
+		while (true) {
+			const fileExists = await this.app.vault.adapter.exists(
+				this.normalizePath(filePath),
+				true,
+			);
+			if (!fileExists) break;
+			filePath = `${this.settings.folder}/${name} ${i}.md`;
+		}
+		return filePath;
 	}
 
 	private async getAllCurrentContacts(folder: string) {

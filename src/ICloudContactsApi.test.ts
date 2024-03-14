@@ -33,6 +33,15 @@ const mockObsidianApi = {
 						normalizedPath: string,
 					) => Promise<{ files: string[]; folders: string[] }>
 				>(async (_normalizedPath: string) => mockListedFiles),
+				exists: jest.fn<
+					(
+						normalizedPath: string,
+						sensitive: boolean,
+					) => Promise<boolean>
+				>(
+					async (_normalizedPath: string, _sensitive: boolean) =>
+						false,
+				),
 			},
 			append: jest.fn<
 				(file: any, data: string, options?: any) => Promise<void>
@@ -373,6 +382,11 @@ describe("updateContacts", () => {
 			frontmatter: { ...mockFrontMatter },
 		});
 		mockFetchContacts.mockResolvedValueOnce([testVCard, sameNameTestVCard]);
+
+		mockObsidianApi.app.vault.adapter.exists.mockImplementation(
+			async (path: string, _sensitive: boolean) =>
+				path === "Contacts/Test Nordmann.md",
+		);
 
 		const api = new ICloudContactsApi(
 			mockObsidianApi,

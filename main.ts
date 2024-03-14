@@ -44,6 +44,8 @@ function createObsidianApiWrapper(app: App): OnlyRequiredFromObsidianApi {
 				adapter: {
 					list: (normalizedPath: string) =>
 						app.vault.adapter.list(normalizedPath),
+					exists: (normalizedPath: string, sensitive: boolean) =>
+						app.vault.adapter.exists(normalizedPath, sensitive),
 				},
 				append: (
 					file: TFile,
