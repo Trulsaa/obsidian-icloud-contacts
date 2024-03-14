@@ -250,7 +250,7 @@ describe("updateContacts", () => {
 		});
 	});
 
-	test.only("Should rename contact file and update header if contact name has been updated", async () => {
+	test("Should rename contact file and update header if contact name has been updated", async () => {
 		const mockFrontMatter = {
 			name: "Test Nordmann",
 			email: ["test@test.test"],
@@ -351,6 +351,60 @@ describe("updateContacts", () => {
 			name: "Test Nordmann",
 			telephone: ["87654321"],
 			iCloudVCard: JSON.stringify(testVCard),
+		});
+	});
+
+	test("Should rename contact file and update header if contact name has been updated", async () => {
+		const mockFrontMatter = {
+			name: "Test Nordmann",
+			email: ["test@test.test"],
+			telephone: ["87654321"],
+			iCloudVCard: testVCard,
+		};
+		const sameNameTestVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/samenametestvcard.vcf",
+			etag: '"samenametestvcard"',
+			data: "BEGIN:VCARD\r\nVERSION:3.0\r\nPRODID:-//Apple Inc.//macOS 14.2.1//EN\r\nN:Nordmann;Test;;;\r\nFN:Test Nordmann\r\nEMAIL;type=INTERNET;type=HOME;type=pref:testnordmann@test.test\r\nTEL;type=pref:12345678\r\nREV:2024-02-28T22:04:34Z\r\nUID:samenametestvcard\r\nEND:VCARD",
+		};
+		const sameNameMockFrontMatter = {};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => {
+				fn(sameNameMockFrontMatter);
+			},
+		);
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [],
+		});
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
+			frontmatter: { ...mockFrontMatter },
+		});
+		mockObsidianApi.app.vault.process;
+		mockFetchContacts.mockResolvedValueOnce([testVCard, sameNameTestVCard]);
+
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			MOCK_DEFAULT_SETTINGS,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+
+		expect(mockObsidianApi.app.vault.process).not.toHaveBeenCalled();
+		expect(
+			mockObsidianApi.app.fileManager.renameFile,
+		).not.toHaveBeenCalled();
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledTimes(1);
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledWith(
+			"Contacts/Test Nordmann 2.md",
+			"# Test Nordmann",
+		);
+		expect(sameNameMockFrontMatter).toEqual({
+			name: "Test Nordmann",
+			email: ["testnordmann@test.test"],
+			telephone: ["12345678"],
+			iCloudVCard: JSON.stringify(sameNameTestVCard),
 		});
 	});
 
