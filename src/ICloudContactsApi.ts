@@ -320,9 +320,7 @@ export default class ICloudContactsApi {
 	) {
 		const newFullName = getFullName(iCloudVCard.data);
 
-		const contactFile = this.app.vault.getFileByPath(
-			this.normalizePath(existingContact.path),
-		);
+		const contactFile = this.app.vault.getFileByPath(existingContact.path);
 		if (!contactFile) {
 			throw new Error("contactFile not found");
 		}
@@ -394,7 +392,7 @@ export default class ICloudContactsApi {
 		);
 		const filePath = `${this.settings.folder}/${fullName}.md`;
 		const newFile = await this.app.vault.create(
-			filePath.replace(/\\/g, ""),
+			this.normalizePath(filePath.replace(/\\/g, "")),
 			`# ${fullName}`,
 		);
 		await this.app.fileManager.processFrontMatter(newFile, (fm) => {
