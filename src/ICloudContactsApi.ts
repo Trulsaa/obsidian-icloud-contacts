@@ -289,9 +289,13 @@ export default class ICloudContactsApi {
 			);
 			if (!contactFile)
 				throw new Error(deletedContact.path + " not found");
+
+			const uniqueFilePath = await this.createUniqeContactFilePath(
+				`${deletedFolder}/${contactFile.basename}`,
+			);
 			await this.app.fileManager.renameFile(
 				contactFile,
-				`${this.settings.folder}/${deletedFolder}/${contactFile.name}`,
+				this.normalizePath(uniqueFilePath),
 			);
 		} catch (e) {
 			this.handleError(
@@ -396,8 +400,8 @@ export default class ICloudContactsApi {
 		});
 	}
 
-	private async createUniqeContactFilePath(name: string) {
-		let filePath = `${this.settings.folder}/${name}.md`;
+	private async createUniqeContactFilePath(subPath: string) {
+		let filePath = `${this.settings.folder}/${subPath}.md`;
 		let i = 2;
 		while (true) {
 			const fileExists = await this.app.vault.adapter.exists(
@@ -405,7 +409,7 @@ export default class ICloudContactsApi {
 				true,
 			);
 			if (!fileExists) break;
-			filePath = `${this.settings.folder}/${name} ${i}.md`;
+			filePath = `${this.settings.folder}/${subPath} ${i}.md`;
 		}
 		return filePath;
 	}

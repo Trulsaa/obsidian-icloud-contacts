@@ -495,7 +495,46 @@ describe("updateContacts", () => {
 		});
 	});
 
-	test("Should move contact file to deleted folder with a new unique name when a contact file in the delted folder with the same contact name exists", async () => {});
+	test("Should move contact file to deleted folder with a new unique name when a contact file in the delted folder with the same contact name exists", async () => {
+		mockFetchContacts.mockResolvedValueOnce([]);
+		const mockFrontMatter = {
+			name: "Test Nordmann",
+			email: ["test@test.test"],
+			telephone: ["87654321"],
+			iCloudVCard: testVCard,
+		};
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
+			frontmatter: { ...mockFrontMatter },
+		});
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: ["Deleted"],
+		});
+		mockObsidianApi.app.vault.adapter.exists.mockImplementation(
+			async (path: string, _sensitive: boolean) =>
+				path === "Contacts/Deleted/Test Nordmann.md",
+		);
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValueOnce({
+			basename: "Test Nordmann",
+		});
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			MOCK_DEFAULT_SETTINGS,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+		expect(
+			mockObsidianApi.app.fileManager.renameFile,
+		).toHaveBeenCalledTimes(1);
+		expect(mockObsidianApi.app.fileManager.renameFile).toHaveBeenCalledWith(
+			{
+				basename: "Test Nordmann",
+			},
+			"Contacts/Deleted/Test Nordmann 2.md",
+		);
+	});
 
 	test("Should handle all types of characters in name", async () => {});
 });
