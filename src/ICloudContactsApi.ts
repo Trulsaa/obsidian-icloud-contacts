@@ -233,17 +233,19 @@ export default class ICloudContactsApi {
 	}
 
 	private reportHappenings(haveSettingsChanged: boolean) {
+		const newCount = this.newContacts.length;
+		const modifiedCount = this.modifiedContacts.length;
+		const deletedCount = this.deletedContacts.length;
+		const skippedCount = this.skippedContacts.length;
 		let noticeText = pluginName + ":\n";
-		if (this.newContacts.length > 0)
-			noticeText += `Created ${this.newContacts.length}\n`;
-		if (this.modifiedContacts.length > 0)
-			noticeText += `Modified ${this.modifiedContacts.length}\n`;
-		if (this.deletedContacts.length > 0)
-			noticeText += `Deleted ${this.deletedContacts.length}\n`;
-		if (this.skippedContacts.length > 0)
-			noticeText += `Skipped ${this.skippedContacts.length}\n`;
+		noticeText += `Created ${newCount}\n`;
+		noticeText += `Modified ${modifiedCount}\n`;
+		noticeText += `Deleted ${deletedCount}\n`;
+		noticeText += `Skipped ${skippedCount}\n`;
 		if (haveSettingsChanged)
 			noticeText += "All contacts where updated to reflect new settings";
+		if (newCount + modifiedCount + deletedCount === 0)
+			noticeText += "Already up to date";
 		this.showNotice(noticeText, 7000);
 		console.log(pluginName, {
 			newContacts: this.newContacts,
