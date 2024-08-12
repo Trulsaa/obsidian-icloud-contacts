@@ -343,11 +343,34 @@ export default class ICloudContactsApi {
 				contactFile,
 				this.normalizePath(uniqueFilePath),
 			);
+		}
+
+		let isPrevNameHeading =
+			this.settings.previousUpdateSettings?.isNameHeading;
+		// This takes into acoount the first time, when the isNameHeading is not in previousUpdateSettings
+		if (isPrevNameHeading === undefined) isPrevNameHeading = true;
+		const isNameHeading = this.settings.isNameHeading;
+
+		const isRemoveHeading = isPrevNameHeading && !isNameHeading;
+		const isAddHeading = !isPrevNameHeading && isNameHeading;
+
+		let searchValue = `# ${existingContact.frontmatter.name}`;
+		let replaceValue = `# ${newFrontMatter.name}`;
+
+		if (isRemoveHeading) {
+			replaceValue = "";
+		} else if (isAddHeading) {
+			searchValue = `\n---\n`;
+			replaceValue = `\n---\n# ${newFrontMatter.name}`;
+		}
+
+		if (
+			searchValue !== replaceValue &&
+			(isPrevNameHeading || isNameHeading)
+		) {
 			await this.app.vault.process(contactFile, (data) => {
-				return data.replace(
-					`# ${existingContact.frontmatter.name}`,
-					`# ${newFrontMatter.name}`,
-				);
+				if (!data.endsWith(searchValue)) replaceValue += "\n";
+				return data.replace(searchValue, replaceValue);
 			});
 		}
 
@@ -392,7 +415,7 @@ export default class ICloudContactsApi {
 
 		const newFile = await this.app.vault.create(
 			this.normalizePath(filePath.replace(/\\/g, "")),
-			`# ${frontMatter.name}`,
+			this.settings.isNameHeading ? `# ${frontMatter.name}` : "",
 		);
 		await this.app.fileManager.processFrontMatter(newFile, (fm) => {
 			for (const [key, value] of Object.entries(frontMatter)) {

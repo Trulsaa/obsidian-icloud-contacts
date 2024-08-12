@@ -105,6 +105,7 @@ const MOCK_DEFAULT_SETTINGS: ICloudContactsSettings = {
 	username: "username",
 	password: "password",
 	folder: "Contacts",
+	isNameHeading: true,
 	telLabels: false,
 	emailLabels: false,
 	urlLabels: false,
@@ -116,6 +117,7 @@ const MOCK_DEFAULT_SETTINGS: ICloudContactsSettings = {
 		username: "username",
 		password: "password",
 		folder: "Contacts",
+		isNameHeading: true,
 		telLabels: false,
 		emailLabels: false,
 		urlLabels: false,
@@ -537,4 +539,304 @@ describe("updateContacts", () => {
 	});
 
 	test("Should handle all types of characters in name", async () => {});
+
+	test("Should not do anything if previousUpdateSettings.isNameHeading is undefined and isNameHeading is true", async () => {
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+		const mockFrontMatter = {
+			name: "Test Nordmann",
+			email: ["test@test.test"],
+			telephone: ["87654321"],
+			iCloudVCard: testVCard,
+		};
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
+			frontmatter: { ...mockFrontMatter },
+		});
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [""],
+		});
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValueOnce({
+			basename: "Test Nordmann",
+		});
+		if (MOCK_DEFAULT_SETTINGS.previousUpdateSettings)
+			MOCK_DEFAULT_SETTINGS.previousUpdateSettings.isNameHeading =
+				undefined;
+		MOCK_DEFAULT_SETTINGS.isNameHeading = true;
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			MOCK_DEFAULT_SETTINGS,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+		expect(mockObsidianApi.app.vault.process).toHaveBeenCalledTimes(0);
+	});
+
+	test("Should remove heading if previousUpdateSettings.isNameHeading is undefined and isNameHeading is false", async () => {
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+		const mockFrontMatter = {
+			name: "Test Nordmann",
+			email: ["test@test.test"],
+			telephone: ["87654321"],
+			iCloudVCard: testVCard,
+		};
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
+			frontmatter: { ...mockFrontMatter },
+		});
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [""],
+		});
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValueOnce({
+			basename: "Test Nordmann",
+		});
+		const mockFileContent = "\n---\n# Test Nordmann";
+
+		let usedSearchValue: any = "";
+		let usedReplaceValue: any = "";
+		// Save the original implementation
+		const originalReplace = String.prototype.replace;
+		const replaceMock = jest
+			.spyOn(String.prototype, "replace")
+			.mockImplementation(function (searchValue, replaceValue) {
+				// Apply the mock only if the string matches the specific one
+				if (this === mockFileContent) {
+					usedSearchValue = searchValue;
+					usedReplaceValue = replaceValue;
+					return "mocked string";
+				}
+
+				// For all other cases, use the original replace function
+				return originalReplace.apply(this, arguments as any);
+			});
+		mockObsidianApi.app.vault.process.mockImplementationOnce(
+			async (
+				_file: any,
+				fn: (data: string) => string,
+				_options?: any,
+			) => {
+				return fn(mockFileContent);
+			},
+		);
+		if (MOCK_DEFAULT_SETTINGS.previousUpdateSettings)
+			MOCK_DEFAULT_SETTINGS.previousUpdateSettings.isNameHeading =
+				undefined;
+		MOCK_DEFAULT_SETTINGS.isNameHeading = false;
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			MOCK_DEFAULT_SETTINGS,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+		expect(mockObsidianApi.app.vault.process).toHaveBeenCalledTimes(1);
+		expect(usedSearchValue).toEqual("# Test Nordmann");
+		expect(usedReplaceValue).toEqual("");
+
+		replaceMock.mockRestore();
+	});
+
+	test("Should remove heading if previousUpdateSettings.isNameHeading is true and isNameHeading is false", async () => {
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+		const mockFrontMatter = {
+			name: "Test Nordmann",
+			email: ["test@test.test"],
+			telephone: ["87654321"],
+			iCloudVCard: testVCard,
+		};
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
+			frontmatter: { ...mockFrontMatter },
+		});
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [""],
+		});
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValueOnce({
+			basename: "Test Nordmann",
+		});
+		const mockFileContent = "\n---\n# Test Nordmann";
+
+		let usedSearchValue: any = "";
+		let usedReplaceValue: any = "";
+		// Save the original implementation
+		const originalReplace = String.prototype.replace;
+		const replaceMock = jest
+			.spyOn(String.prototype, "replace")
+			.mockImplementation(function (searchValue, replaceValue) {
+				// Apply the mock only if the string matches the specific one
+				if (this === mockFileContent) {
+					usedSearchValue = searchValue;
+					usedReplaceValue = replaceValue;
+					return "mocked string";
+				}
+
+				// For all other cases, use the original replace function
+				return originalReplace.apply(this, arguments as any);
+			});
+		mockObsidianApi.app.vault.process.mockImplementationOnce(
+			async (
+				_file: any,
+				fn: (data: string) => string,
+				_options?: any,
+			) => {
+				return fn(mockFileContent);
+			},
+		);
+		if (MOCK_DEFAULT_SETTINGS.previousUpdateSettings)
+			MOCK_DEFAULT_SETTINGS.previousUpdateSettings.isNameHeading = true;
+		MOCK_DEFAULT_SETTINGS.isNameHeading = false;
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			MOCK_DEFAULT_SETTINGS,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+		expect(mockObsidianApi.app.vault.process).toHaveBeenCalledTimes(1);
+		expect(usedSearchValue).toEqual("# Test Nordmann");
+		expect(usedReplaceValue).toEqual("");
+
+		replaceMock.mockRestore();
+	});
+
+	test("Should add heading if previousUpdateSettings.isNameHeading is false and isNameHeading is true", async () => {
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+		const mockFrontMatter = {
+			name: "Test Nordmann",
+			email: ["test@test.test"],
+			telephone: ["87654321"],
+			iCloudVCard: testVCard,
+		};
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
+			frontmatter: { ...mockFrontMatter },
+		});
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [""],
+		});
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValueOnce({
+			basename: "Test Nordmann",
+		});
+		const mockFileContent = "\n---\n";
+
+		let usedSearchValue: any = "";
+		let usedReplaceValue: any = "";
+		// Save the original implementation
+		const originalReplace = String.prototype.replace;
+		const replaceMock = jest
+			.spyOn(String.prototype, "replace")
+			.mockImplementation(function (searchValue, replaceValue) {
+				// Apply the mock only if the string matches the specific one
+				if (this === mockFileContent) {
+					usedSearchValue = searchValue;
+					usedReplaceValue = replaceValue;
+					// For all other cases, use the original replace function
+					return originalReplace.apply(this, arguments as any);
+				}
+
+				// For all other cases, use the original replace function
+				return originalReplace.apply(this, arguments as any);
+			});
+
+		let newFileContent = "";
+		mockObsidianApi.app.vault.process.mockImplementationOnce(
+			async (
+				_file: any,
+				fn: (data: string) => string,
+				_options?: any,
+			) => {
+				newFileContent = fn(mockFileContent);
+				return newFileContent;
+			},
+		);
+		if (MOCK_DEFAULT_SETTINGS.previousUpdateSettings)
+			MOCK_DEFAULT_SETTINGS.previousUpdateSettings.isNameHeading = false;
+		MOCK_DEFAULT_SETTINGS.isNameHeading = true;
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			MOCK_DEFAULT_SETTINGS,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+		expect(mockObsidianApi.app.vault.process).toHaveBeenCalledTimes(1);
+		expect(usedSearchValue).toEqual("\n---\n");
+		expect(usedReplaceValue).toEqual("\n---\n# Test Nordmann");
+		expect(newFileContent).toEqual("\n---\n# Test Nordmann");
+
+		replaceMock.mockRestore();
+	});
+
+	test("Should add heading with trailing new line if previousUpdateSettings.isNameHeading is false, isNameHeading is true and the file hase content beyond the frontmatter", async () => {
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+		const mockFrontMatter = {
+			name: "Test Nordmann",
+			email: ["test@test.test"],
+			telephone: ["87654321"],
+			iCloudVCard: testVCard,
+		};
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
+			frontmatter: { ...mockFrontMatter },
+		});
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [""],
+		});
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValueOnce({
+			basename: "Test Nordmann",
+		});
+		const mockFileContent = "\n---\nhei du der";
+
+		let usedSearchValue: any = "";
+		let usedReplaceValue: any = "";
+		// Save the original implementation
+		const originalReplace = String.prototype.replace;
+		const replaceMock = jest
+			.spyOn(String.prototype, "replace")
+			.mockImplementation(function (searchValue, replaceValue) {
+				// Apply the mock only if the string matches the specific one
+				if (this === mockFileContent) {
+					usedSearchValue = searchValue;
+					usedReplaceValue = replaceValue;
+					// For all other cases, use the original replace function
+					return originalReplace.apply(this, arguments as any);
+				}
+
+				// For all other cases, use the original replace function
+				return originalReplace.apply(this, arguments as any);
+			});
+
+		let newFileContent = "";
+		mockObsidianApi.app.vault.process.mockImplementationOnce(
+			async (
+				_file: any,
+				fn: (data: string) => string,
+				_options?: any,
+			) => {
+				newFileContent = fn(mockFileContent);
+				return newFileContent;
+			},
+		);
+		if (MOCK_DEFAULT_SETTINGS.previousUpdateSettings)
+			MOCK_DEFAULT_SETTINGS.previousUpdateSettings.isNameHeading = false;
+		MOCK_DEFAULT_SETTINGS.isNameHeading = true;
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			MOCK_DEFAULT_SETTINGS,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+		expect(mockObsidianApi.app.vault.process).toHaveBeenCalledTimes(1);
+		expect(usedSearchValue).toEqual("\n---\n");
+		expect(usedReplaceValue).toEqual("\n---\n# Test Nordmann\n");
+		expect(newFileContent).toEqual("\n---\n# Test Nordmann\nhei du der");
+
+		replaceMock.mockRestore();
+	});
 });

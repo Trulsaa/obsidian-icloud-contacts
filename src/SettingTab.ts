@@ -12,6 +12,7 @@ export interface ICloudContactsSettings {
 	username: string;
 	password: string;
 	folder: string;
+	isNameHeading?: boolean;
 	telLabels: boolean;
 	emailLabels: boolean;
 	urlLabels: boolean;
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	username: "",
 	password: "",
 	folder: "Contacts",
+	isNameHeading: true,
 	telLabels: false,
 	emailLabels: false,
 	urlLabels: false,
@@ -112,6 +114,20 @@ export class SettingTab extends PluginSettingTab {
 
 		containerEl.createEl("br");
 		containerEl.createEl("h3", { text: "Parameters" });
+		containerEl.createEl("small", {
+			text: "Remember to run Update Contacts after changing any of the following to have the changes take effect.",
+		});
+
+		new Setting(containerEl)
+			.setName("Add heading with contact name to the file contents")
+			.addToggle((bool) =>
+				bool
+					.setValue(this.plugin.settings.isNameHeading || true)
+					.onChange(async (value) => {
+						this.plugin.settings.isNameHeading = value;
+						await this.plugin.saveSettings();
+					}),
+			);
 
 		new Setting(containerEl)
 			.setName("Add labels to telephone numbers")
