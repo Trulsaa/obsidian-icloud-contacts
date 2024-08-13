@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-icloud-contacts",
-	"version": "0.4.3",
+	"version": "0.4.4",
 	"description": "Imports contacts from iCloud and manages a note for each contact.",
 	"main": "main.js",
 	"scripts": {
