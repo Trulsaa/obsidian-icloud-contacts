@@ -16,7 +16,7 @@ jobs:
                   node-version: 22.5.1
 
             - name: Install NPM dependencies
-              run: npm ci
+              run: npm install
 
             - name: Test
               run: npm run test
