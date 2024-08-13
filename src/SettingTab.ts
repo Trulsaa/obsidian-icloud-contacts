@@ -122,7 +122,7 @@ export class SettingTab extends PluginSettingTab {
 			.setName("Add heading with contact name to the file contents")
 			.addToggle((bool) =>
 				bool
-					.setValue(this.plugin.settings.isNameHeading || true)
+					.setValue(!!this.plugin.settings.isNameHeading)
 					.onChange(async (value) => {
 						this.plugin.settings.isNameHeading = value;
 						await this.plugin.saveSettings();
