@@ -102,6 +102,7 @@ export default class ICloudContactsApi {
 		private fetchContacts: (
 			username: string,
 			password: string,
+			serverUrl: string,
 		) => Promise<ICloudVCard[]>,
 		private showNotice: NoticeShower,
 	) {
@@ -128,6 +129,7 @@ export default class ICloudContactsApi {
 			const iCloudVCards = await this.fetchContacts(
 				this.settings.username,
 				this.settings.password,
+				this.settings.iCloudServerUrl,
 			);
 
 			const existingContacts = await this.getAllCurrentContacts(

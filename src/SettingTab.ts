@@ -18,6 +18,7 @@ export interface ICloudContactsSettings {
 	urlLabels: boolean;
 	relatedLabels: boolean;
 	excludedKeys: string;
+	iCloudServerUrl: string;
 	previousUpdateSettings?: ICloudContactsSettings;
 	previousUpdateData?: ICloudVCard[];
 }
@@ -31,6 +32,7 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	emailLabels: false,
 	urlLabels: false,
 	relatedLabels: false,
+	iCloudServerUrl: "https://contacts.icloud.com",
 	excludedKeys:
 		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality vnd63SensitiveContentConfig",
 };
@@ -98,6 +100,21 @@ export class SettingTab extends PluginSettingTab {
 				cls: "linkMoreInfo",
 			}),
 		);
+
+		new Setting(containerEl)
+			.setName("ICloud server URL")
+			.setDesc(
+				"The URL of the iCloud server. Defaults to 'https://contacts.icloud.com'. Chinese users may need to change this to 'https://contacts.icloud.com.cn'",
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("Url of the iCloud server")
+					.setValue(this.plugin.settings.iCloudServerUrl)
+					.onChange(async (value) => {
+						this.plugin.settings.iCloudServerUrl = value;
+						await this.plugin.saveSettings();
+					}),
+			);
 
 		new Setting(containerEl)
 			.setName("Contacts folder")
