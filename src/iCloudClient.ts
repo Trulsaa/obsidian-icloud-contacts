@@ -88,14 +88,17 @@ const DAVNamespaceShort = {
 	DAV: "d",
 };
 
-const serverUrl = "https://contacts.icloud.com";
 const accountType: "carddav" | "caldav" = "carddav";
 
-export async function fetchContacts(username: string, password: string) {
+export async function fetchContacts(
+	username: string,
+	password: string,
+	serverUrl: string,
+) {
 	const authHeaders = {
 		authorization: `Basic ${btoa(`${username}:${password}`)}`,
 	};
-	const { rootUrl, homeUrl } = await login(authHeaders);
+	const { rootUrl, homeUrl } = await login(serverUrl, authHeaders);
 	const addressBooks = await fetchAddressBooks(homeUrl, rootUrl, authHeaders);
 	const vCards = await fetchVCards({
 		addressBook: addressBooks[0],
@@ -104,8 +107,8 @@ export async function fetchContacts(username: string, password: string) {
 	return vCards;
 }
 
-async function login(headers: { authorization: string }) {
-	const rootUrl = await serviceDiscovery(headers);
+async function login(serverUrl: string, headers: { authorization: string }) {
+	const rootUrl = await serviceDiscovery(serverUrl, headers);
 	const principalUrl = await fetchPrincipalUrl(rootUrl, headers);
 	const homeUrl = await fetchHomeUrl(rootUrl, principalUrl, headers);
 	return { rootUrl, principalUrl, homeUrl };
@@ -315,7 +318,7 @@ async function fetchAddressBooks(
 	);
 }
 
-async function serviceDiscovery(headers: { authorization: string }) {
+async function serviceDiscovery(serverUrl: string, headers: { authorization: string }) {
 	const endpoint = new URL(serverUrl);
 	const uri = new URL(`/.well-known/${accountType}`, endpoint);
 	try {
@@ -603,4 +606,3 @@ async function supportedReportSet(params: {
 		) ?? []
 	);
 }
-
