@@ -4,7 +4,7 @@
 	<img src="https://img.shields.io/github/manifest-json/v/Trulsaa/obsidian-icloud-contacts?color=blue">
     <img src="https://img.shields.io/github/release-date/Trulsaa/obsidian-icloud-contacts">
 	<img src="https://img.shields.io/github/license/Trulsaa/obsidian-icloud-contacts">
-	<img src="https://img.shields.io/github/downloads/Trulsaa/obsidian-icloud-contacts/total">
+	<img src="https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%238a5cf5&label=downloads&query=%24%5B%22icloud-contacts%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json" alt="Obsidian Downloads">
 	<img src="https://img.shields.io/github/issues/Trulsaa/obsidian-icloud-contacts">
 </p>
 
