@@ -5,6 +5,7 @@ import { ICloudVCard } from "./ICloudContactsApi";
 export interface ICloudContactsSettings {
 	[key: string]:
 		| string
+		| Buffer
 		| boolean
 		| ICloudContactsSettings
 		| undefined

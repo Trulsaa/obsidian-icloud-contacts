@@ -100,11 +100,11 @@ export default class ICloudContacts extends Plugin {
 	private api: ICloudContactsApi;
 
 	async onload() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			await this.loadData(),
-		);
+		const data = await this.loadData();
+		if (data.password_encrypted) {
+			data.password = this.getDecryptedKey(data.password_encrypted);
+		}
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
 
 		this.api = new ICloudContactsApi(
 			createObsidianApiWrapper(this.app),
@@ -158,17 +158,28 @@ export default class ICloudContacts extends Plugin {
 	onunload() {}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
+		await this.saveData(this.getSettingsWithoutPassword());
 	}
 
-	getDecryptedKey(keyBuffer: any, oldVal: string) {
+	getSettingsWithoutPassword() {
+		const data = { ...this.settings };
 		try {
-			if (
-				(keyBuffer as string)?.startsWith?.(DecryptKeyPrefix) ||
-				!safeStorage?.isEncryptionAvailable() ||
-				!this.settings.encrypt_keys
-			) {
-				throw "disabled decryption";
+			data.password_encrypted = this.getEncryptedKey(
+				this.settings.password,
+			);
+			data.password = "";
+			if (data.previousUpdateSettings)
+				data.previousUpdateSettings.password = "";
+		} catch (err) {
+			console.error(err);
+		}
+		return data;
+	}
+
+	getDecryptedKey(keyBuffer: any) {
+		try {
+			if (!safeStorage?.isEncryptionAvailable()) {
+				throw "Encryption is not available";
 			}
 
 			const buff = Buffer.from(keyBuffer?.data || []);
@@ -179,7 +190,6 @@ export default class ICloudContacts extends Plugin {
 				? "**FAILED TO DECRYPT KEYS**"
 				: decrypted;
 		} catch (err: any) {
-			// console.log(err);
 			const [inCaseDecryptionFails, key] =
 				keyBuffer?.split?.(DecryptKeyPrefix) || [];
 			return inCaseDecryptionFails?.length ||
@@ -190,11 +200,8 @@ export default class ICloudContacts extends Plugin {
 	}
 
 	getEncryptedKey(apiKey: string) {
-		if (
-			!safeStorage?.isEncryptionAvailable() ||
-			!this.settings.encrypt_keys
-		) {
-			return `${DecryptKeyPrefix}${apiKey}`;
+		if (!safeStorage?.isEncryptionAvailable()) {
+			throw "Encryption is not available";
 		}
 
 		return safeStorage.encryptString(apiKey) as Buffer;
