@@ -3,6 +3,7 @@ import {
 	DataWriteOptions,
 	Notice,
 	OpenViewState,
+	Platform,
 	Plugin,
 	TFile,
 	normalizePath,
@@ -26,6 +27,20 @@ function showNotice(message: string, duration: number) {
 		},
 		hide: () => notice.hide(),
 	};
+}
+
+const DecryptKeyPrefix = "__@#key_prefix#@__";
+//    @ts-ignore
+let safeStorage: Electron.SafeStorage;
+
+if (Platform.isDesktop) {
+	// @ts-ignore
+	safeStorage = require("electron")?.remote?.safeStorage;
+}
+
+function containsInvalidCharacter(inputString: string) {
+	const invalidCharRegex = /[^\x00-\x7F]+/g;
+	return invalidCharRegex.test(inputString);
 }
 
 function createObsidianApiWrapper(app: App): OnlyRequiredFromObsidianApi {
@@ -144,5 +159,44 @@ export default class ICloudContacts extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	getDecryptedKey(keyBuffer: any, oldVal: string) {
+		try {
+			if (
+				(keyBuffer as string)?.startsWith?.(DecryptKeyPrefix) ||
+				!safeStorage?.isEncryptionAvailable() ||
+				!this.settings.encrypt_keys
+			) {
+				throw "disabled decryption";
+			}
+
+			const buff = Buffer.from(keyBuffer?.data || []);
+
+			const decrypted = safeStorage.decryptString(buff) as string;
+
+			return containsInvalidCharacter(decrypted)
+				? "**FAILED TO DECRYPT KEYS**"
+				: decrypted;
+		} catch (err: any) {
+			// console.log(err);
+			const [inCaseDecryptionFails, key] =
+				keyBuffer?.split?.(DecryptKeyPrefix) || [];
+			return inCaseDecryptionFails?.length ||
+				containsInvalidCharacter(key)
+				? "**FAILED TO DECRYPT**"
+				: key;
+		}
+	}
+
+	getEncryptedKey(apiKey: string) {
+		if (
+			!safeStorage?.isEncryptionAvailable() ||
+			!this.settings.encrypt_keys
+		) {
+			return `${DecryptKeyPrefix}${apiKey}`;
+		}
+
+		return safeStorage.encryptString(apiKey) as Buffer;
 	}
 }
