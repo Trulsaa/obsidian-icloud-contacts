@@ -6,6 +6,7 @@ const defaultSettings = {
 	emailLabels: false,
 	urlLabels: false,
 	relatedLabels: false,
+	addressLabels: false,
 	excludedKeys: "xAbLabel xAbadr",
 };
 const testCases = [
@@ -249,6 +250,60 @@ const testCases = [
 			name: "Full Name",
 		},
 		defaultSettings,
+	],
+	[
+		"Should parse addresses with labels",
+		[
+			{
+				key: "adr",
+				meta: { group: "item15", type: ["home", "pref"] },
+				type: "text",
+				value: [
+					"",
+					"",
+					"Home road 6",
+					"Texas",
+					"",
+					"1234",
+					"United States",
+				],
+			},
+			{
+				key: "adr",
+				meta: { group: "item6", type: "work" },
+				type: "text",
+				value: ["", "", "Work street 2", "Alta", "", "7896", "Norway"],
+			},
+			{
+				key: "xAbadr",
+				meta: { group: "item15" },
+				type: "text",
+				value: "us",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item15" },
+				type: "text",
+				value: "Hjemme",
+			},
+			{
+				key: "xAbadr",
+				meta: { group: "item6" },
+				type: "text",
+				value: "no",
+			},
+		],
+		{
+			addresses: [
+				"Hjemme: Home road 6, Texas, 1234, United States",
+				"Work: Work street 2, Alta, 7896, Norway",
+			],
+			name: "Full Name",
+		},
+		{
+			...defaultSettings,
+			addressLabels: true,
+		},
 	],
 	[
 		"Should parse url",
@@ -685,11 +740,16 @@ describe("createFrontmatter", () => {
 					emailLabels: boolean;
 					urlLabels: boolean;
 					relatedLabels: boolean;
+					addressLabels: boolean;
 					excludedKeys: string;
 				},
 			) => {
 				expect(
-					createFrontmatterFromParsedVCard(parsedVCard, "Full Name", settings),
+					createFrontmatterFromParsedVCard(
+						parsedVCard,
+						"Full Name",
+						settings,
+					),
 				).toEqual(expected);
 			},
 		);

@@ -110,6 +110,7 @@ const MOCK_DEFAULT_SETTINGS: ICloudContactsSettings = {
 	emailLabels: false,
 	urlLabels: false,
 	relatedLabels: false,
+	addressLabels: false,
 	excludedKeys:
 		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality",
 	settingsChanged: false,
@@ -123,6 +124,7 @@ const MOCK_DEFAULT_SETTINGS: ICloudContactsSettings = {
 		emailLabels: false,
 		urlLabels: false,
 		relatedLabels: false,
+		addressLabels: false,
 		excludedKeys:
 			"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality",
 		settingsChanged: false,

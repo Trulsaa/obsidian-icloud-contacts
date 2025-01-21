@@ -17,6 +17,7 @@ export interface ICloudContactsSettings {
 	emailLabels: boolean;
 	urlLabels: boolean;
 	relatedLabels: boolean;
+	addressLabels: boolean;
 	excludedKeys: string;
 	iCloudServerUrl: string;
 	previousUpdateSettings?: ICloudContactsSettings;
@@ -32,6 +33,7 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	emailLabels: false,
 	urlLabels: false,
 	relatedLabels: false,
+	addressLabels: false,
 	iCloudServerUrl: "https://contacts.icloud.com",
 	excludedKeys:
 		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality vnd63SensitiveContentConfig",
@@ -190,6 +192,16 @@ export class SettingTab extends PluginSettingTab {
 					}),
 			);
 
+		new Setting(containerEl)
+			.setName("Add labels to addresses")
+			.addToggle((bool) =>
+				bool
+					.setValue(this.plugin.settings.addressLabels)
+					.onChange(async (value) => {
+						this.plugin.settings.addressLabels = value;
+						await this.plugin.saveSettings();
+					}),
+			);
 		new Setting(containerEl)
 			.setName("Excluded keys")
 			.setDesc(

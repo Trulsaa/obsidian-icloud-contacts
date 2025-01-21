@@ -8,6 +8,7 @@ export function createFrontmatter(
 		emailLabels: boolean;
 		urlLabels: boolean;
 		relatedLabels: boolean;
+		addressLabels: boolean;
 		excludedKeys: string;
 	},
 ) {
@@ -27,12 +28,14 @@ export function createFrontmatterFromParsedVCard(
 		emailLabels,
 		urlLabels,
 		relatedLabels,
+		addressLabels,
 		excludedKeys,
 	}: {
 		telLabels: boolean;
 		emailLabels: boolean;
 		urlLabels: boolean;
 		relatedLabels: boolean;
+		addressLabels: boolean;
 		excludedKeys: string;
 	},
 ) {
@@ -57,7 +60,12 @@ export function createFrontmatterFromParsedVCard(
 					emailLabels && label ? `${label}: ${value}` : value,
 					o,
 				);
-			if (key === "adr") return addAddresses(value, o);
+			if (key === "adr")
+				return addAddresses(
+					value,
+					o,
+					addressLabels ? label : undefined,
+				);
 			if (key === "url")
 				return addValueToArray(
 					"url",
@@ -116,8 +124,10 @@ function stripSocialValue(value: string) {
 function addAddresses(
 	value: string[],
 	o: { name: string; addresses?: string[] },
+	label?: string,
 ) {
-	const address = value.filter((v) => !!v).join(", ");
+	let address = value.filter((v) => !!v).join(", ");
+	if (label) address = `${label}: ${address}`;
 	if (Array.isArray(o.addresses))
 		return { ...o, addresses: [...o.addresses!, address] };
 	return {
@@ -173,6 +183,7 @@ function getLabel(
 	parsedVCardMeta: { [key: string]: string | string[] },
 	parsedVCards: VCards[],
 ): string | undefined {
+	if (parsedVCardMeta.group === "item15") debugger;
 	if (
 		!parsedVCardMeta.group &&
 		!Array.isArray(parsedVCardMeta.type) &&
@@ -186,9 +197,10 @@ function getLabel(
 			({ key, meta }) =>
 				key === "xAbLabel" && meta.group === parsedVCardMeta.group,
 		);
-		if (!xAbLabel) return;
-		const value = xAbLabel.value as string;
-		return value.replace("_$!<", "").replace(">!$_", "");
+		if (xAbLabel) {
+			const value = xAbLabel.value as string;
+			return value.replace("_$!<", "").replace(">!$_", "");
+		}
 	}
 
 	const type = parsedVCardMeta.type;
