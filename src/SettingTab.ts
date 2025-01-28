@@ -1,10 +1,12 @@
 import { App, PluginSettingTab, Setting, TextComponent } from "obsidian";
 import ICloudContacts from "../main";
 import { ICloudVCard } from "./ICloudContactsApi";
+import { parseVCardToJCard } from "./parser";
 
 export interface ICloudContactsSettings {
 	[key: string]:
 		| string
+		| string[]
 		| boolean
 		| ICloudContactsSettings
 		| undefined
@@ -22,6 +24,7 @@ export interface ICloudContactsSettings {
 	iCloudServerUrl: string;
 	previousUpdateSettings?: ICloudContactsSettings;
 	previousUpdateData?: ICloudVCard[];
+	groups: string[];
 }
 
 export const DEFAULT_SETTINGS: ICloudContactsSettings = {
@@ -37,12 +40,21 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	iCloudServerUrl: "https://contacts.icloud.com",
 	excludedKeys:
 		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality vnd63SensitiveContentConfig",
+	groups: [],
 };
 
 export class SettingTab extends PluginSettingTab {
 	plugin: ICloudContacts;
 
-	constructor(app: App, plugin: ICloudContacts) {
+	constructor(
+		app: App,
+		plugin: ICloudContacts,
+		private fetchContacts: (
+			username: string,
+			password: string,
+			serverUrl: string,
+		) => Promise<ICloudVCard[]>,
+	) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -218,5 +230,69 @@ export class SettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+
+		containerEl.createEl("br");
+		containerEl.createEl("h3", { text: "Groups" });
+		const loadingElement = containerEl.createEl("small", {
+			text: "Loading groups...",
+		});
+
+		this.fetchContacts(
+			this.plugin.settings.username,
+			this.plugin.settings.password,
+			this.plugin.settings.iCloudServerUrl,
+		).then((contacts) => {
+			// get groups
+			const groups = contacts
+				.map((iCloudVCard) => parseVCardToJCard(iCloudVCard.data))
+				.filter((jCard) => {
+					const kindJCard = jCard.find(
+						(o) => o.key === "xAddressbookserverKind",
+					);
+					return kindJCard && kindJCard.value === "group";
+				});
+
+			loadingElement.remove();
+
+			if (groups.length === 0) {
+				containerEl.createEl("p", {
+					text: "No groups found",
+				});
+			}
+
+			if (groups.length > 0) {
+				for (const group of groups) {
+					const fnJCard = group.find((o) => o.key === "fn");
+
+					if (fnJCard && !Array.isArray(fnJCard.value)) {
+						new Setting(containerEl)
+							.setName(fnJCard.value)
+							.addToggle((bool) =>
+								bool
+									.setValue(
+										this.plugin.settings.groups.includes(
+											fnJCard.value as string,
+										),
+									)
+									.onChange(async (value) => {
+										if (value) {
+											this.plugin.settings.groups.push(
+												fnJCard.value as string,
+											);
+										} else {
+											this.plugin.settings.groups =
+												this.plugin.settings.groups.filter(
+													(i) =>
+														i !==
+														(fnJCard.value as string),
+												);
+										}
+										await this.plugin.saveSettings();
+									}),
+							);
+					}
+				}
+			}
+		});
 	}
 }
