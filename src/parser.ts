@@ -1,14 +1,15 @@
 import { parse as vcfParse } from "vcf";
 
-export type JCard = {
+export type JCardCollection = JCardPart[];
+export type JCardPart = {
 	key: string;
 	meta: { [key: string]: string | string[] };
 	type: string;
 	value: string | string[];
-}[];
+};
 
 export function parseVCardToJCardAndFullName(vcardString: string): {
-	jCard: JCard;
+	jCard: JCardCollection;
 	fullName: string;
 } {
 	const jCard = parseVCardToJCard(vcardString);
@@ -18,7 +19,7 @@ export function parseVCardToJCardAndFullName(vcardString: string): {
 	};
 }
 
-export function parseVCardToJCard(vcardString: string): JCard {
+export function parseVCardToJCard(vcardString: string): JCardPart[] {
 	const jCard = vcfParse(vcardString)[0].toJSON();
 
 	return jCard[1].map((item) => {
@@ -38,7 +39,7 @@ export function getFullNameFromVCard(vcardString: string): string {
 	return getFullName(parseVCardToJCard(vcardString));
 }
 
-function getFullName(jCard: JCard): string {
+function getFullName(jCard: JCardCollection): string {
 	const fullName = jCard.find(({ key }) => key === "fn");
 	if (fullName && fullName.value) {
 		return (fullName.value as string).replace(/\\/g, "");

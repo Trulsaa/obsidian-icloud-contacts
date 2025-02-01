@@ -263,28 +263,34 @@ export class SettingTab extends PluginSettingTab {
 			if (groups.length > 0) {
 				for (const group of groups) {
 					const fnJCard = group.find((o) => o.key === "fn");
+					const uidJCard = group.find((o) => o.key === "uid");
 
-					if (fnJCard && !Array.isArray(fnJCard.value)) {
+					if (
+						fnJCard &&
+						!Array.isArray(fnJCard.value) &&
+						uidJCard &&
+						!Array.isArray(uidJCard.value)
+					) {
 						new Setting(containerEl)
 							.setName(fnJCard.value)
 							.addToggle((bool) =>
 								bool
 									.setValue(
 										this.plugin.settings.groups.includes(
-											fnJCard.value as string,
+											uidJCard.value as string,
 										),
 									)
 									.onChange(async (value) => {
 										if (value) {
 											this.plugin.settings.groups.push(
-												fnJCard.value as string,
+												uidJCard.value as string,
 											);
 										} else {
 											this.plugin.settings.groups =
 												this.plugin.settings.groups.filter(
 													(i) =>
 														i !==
-														(fnJCard.value as string),
+														(uidJCard.value as string),
 												);
 										}
 										await this.plugin.saveSettings();

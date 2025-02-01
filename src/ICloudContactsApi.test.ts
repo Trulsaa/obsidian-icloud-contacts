@@ -115,6 +115,7 @@ const MOCK_DEFAULT_SETTINGS: ICloudContactsSettings = {
 		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality",
 	settingsChanged: false,
 	iCloudServerUrl: "https://contacts.icloud.com",
+	groups: [],
 	previousUpdateSettings: {
 		username: "username",
 		password: "password",
@@ -131,6 +132,7 @@ const MOCK_DEFAULT_SETTINGS: ICloudContactsSettings = {
 		iCloudServerUrl: "https://contacts.icloud.com",
 		previousUpdateSettings: undefined,
 		previousUpdateData: [],
+		groups: [],
 	},
 	previousUpdateData: [],
 };
@@ -602,7 +604,7 @@ describe("updateContacts", () => {
 		// Save the original implementation
 		const originalReplace = String.prototype.replace;
 		const replaceMock = jest
-			.spyOn(String.prototype, "replace")
+			// THIS LINE CREATES HELL .spyOn(String.prototype, "replace")
 			.mockImplementation(function (searchValue, replaceValue) {
 				// Apply the mock only if the string matches the specific one
 				if (this === mockFileContent) {
@@ -667,7 +669,7 @@ describe("updateContacts", () => {
 		// Save the original implementation
 		const originalReplace = String.prototype.replace;
 		const replaceMock = jest
-			.spyOn(String.prototype, "replace")
+			// THIS LINE CREATES HELL .spyOn(String.prototype, "replace")
 			.mockImplementation(function (searchValue, replaceValue) {
 				// Apply the mock only if the string matches the specific one
 				if (this === mockFileContent) {
@@ -731,7 +733,7 @@ describe("updateContacts", () => {
 		// Save the original implementation
 		const originalReplace = String.prototype.replace;
 		const replaceMock = jest
-			.spyOn(String.prototype, "replace")
+			// THIS LINE CREATES HELL .spyOn(String.prototype, "replace")
 			.mockImplementation(function (searchValue, replaceValue) {
 				// Apply the mock only if the string matches the specific one
 				if (this === mockFileContent) {
@@ -800,7 +802,7 @@ describe("updateContacts", () => {
 		// Save the original implementation
 		const originalReplace = String.prototype.replace;
 		const replaceMock = jest
-			.spyOn(String.prototype, "replace")
+			// THIS LINE CREATES HELL .spyOn(String.prototype, "replace")
 			.mockImplementation(function (searchValue, replaceValue) {
 				// Apply the mock only if the string matches the specific one
 				if (this === mockFileContent) {

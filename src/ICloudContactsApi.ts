@@ -1,5 +1,6 @@
 import { ICloudContactsSettings } from "./SettingTab";
 import { createFrontmatter } from "./frontMatter";
+import { JCardPart, parseVCardToJCard } from "./parser";
 
 export type ICloudVCard = {
 	url: string;
@@ -140,12 +141,43 @@ export default class ICloudContactsApi {
 				nDots++;
 			}, 500);
 
-			const iCloudVCards = await this.fetchContacts(
+			let iCloudVCards = await this.fetchContacts(
 				this.settings.username,
 				this.settings.password,
 				this.settings.iCloudServerUrl,
 			);
 			clearInterval(interval);
+
+			if (this.settings.groups.length > 0) {
+				// Finn alle valkte gruppe kort
+				const groupContacts = iCloudVCards.filter((vCard) =>
+					this.settings.groups.some((id) => vCard.data.includes(id)),
+				);
+
+				// Lag liste over alle uid i gruppe kortene
+				const contactUids = groupContacts.reduce(
+					(uids, vCard) =>
+						parseVCardToJCard(vCard.data)
+							.filter(
+								(jCard) =>
+									jCard.key === "xAddressbookserverMember",
+							)
+							.map((jCard) =>
+								(jCard.value as string).replace(
+									"urn:uuid:",
+									"",
+								),
+							),
+					[] as string[],
+				);
+
+				// Behold kun de kortene som har en uid i listen
+				if (contactUids.length > 0) {
+					iCloudVCards = iCloudVCards.filter((vCard) =>
+						contactUids.some((uid) => vCard.data.includes(uid)),
+					);
+				}
+			}
 
 			const existingContacts = await this.getAllCurrentContacts(
 				this.settings.folder,
