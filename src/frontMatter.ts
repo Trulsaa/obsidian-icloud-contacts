@@ -183,7 +183,6 @@ function getLabel(
 	parsedVCardMeta: { [key: string]: string | string[] },
 	parsedVCards: VCards[],
 ): string | undefined {
-	if (parsedVCardMeta.group === "item15") debugger;
 	if (
 		!parsedVCardMeta.group &&
 		!Array.isArray(parsedVCardMeta.type) &&
