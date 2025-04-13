@@ -126,11 +126,26 @@ export default class ICloudContactsApi {
 		try {
 			this.validateSettings();
 			await this.getCreateFolder(this.settings.folder);
+
+			// Starte a interval that sets setMessage every 1 second
+			let nDots = 0;
+			const interval = setInterval(() => {
+				// Update the number ofr dots at the end every secoon
+				if (nDots > 3) nDots = 0;
+				// Pad the number of dots to 3
+				const dots = ".".repeat(nDots).padEnd(3, " ");
+				startNotice.setMessage(
+					`${pluginName}: Downloading contacts${dots}`,
+				);
+				nDots++;
+			}, 500);
+
 			const iCloudVCards = await this.fetchContacts(
 				this.settings.username,
 				this.settings.password,
 				this.settings.iCloudServerUrl,
 			);
+			clearInterval(interval);
 
 			const existingContacts = await this.getAllCurrentContacts(
 				this.settings.folder,
@@ -138,7 +153,11 @@ export default class ICloudContactsApi {
 
 			const previousUpdateData = this.settings.previousUpdateData || [];
 
+			let i = 0;
 			for (const iCloudVCard of iCloudVCards) {
+				startNotice.setMessage(
+					`${pluginName}: Updating contact ${i++} of ${iCloudVCards.length}`,
+				);
 				const previousUpdateVCard = previousUpdateData.find(
 					(vCard) => vCard.url === iCloudVCard.url,
 				);
