@@ -429,13 +429,14 @@ export default class ICloudContactsApi {
 
 	private async createUniqeContactFilePath(subPath: string) {
 		let filePath = `${this.settings.folder}/${subPath}.md`;
-		let i = 2;
+		let i = 1;
 		while (true) {
 			const fileExists = await this.app.vault.adapter.exists(
 				this.normalizePath(filePath),
 				true,
 			);
 			if (!fileExists) break;
+			i++;
 			filePath = `${this.settings.folder}/${subPath} ${i}.md`;
 		}
 		return filePath;
