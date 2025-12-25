@@ -1,5 +1,6 @@
 import { ICloudContactsSettings } from "./SettingTab";
 import { createFrontmatter } from "./frontMatter";
+import { JCardPart, parseVCardToJCard } from "./parser";
 
 export type ICloudVCard = {
 	url: string;
@@ -140,12 +141,43 @@ export default class ICloudContactsApi {
 				nDots++;
 			}, 500);
 
-			const iCloudVCards = await this.fetchContacts(
+			let iCloudVCards = await this.fetchContacts(
 				this.settings.username,
 				this.settings.password,
 				this.settings.iCloudServerUrl,
 			);
 			clearInterval(interval);
+
+			if (this.settings.groups.length > 0) {
+				// Finnd al chosen group cards
+				const groupContacts = iCloudVCards.filter((vCard) =>
+					this.settings.groups.some((id) => vCard.data.includes(id)),
+				);
+
+				// Create a list of all uids in the group cards
+				const contactUids = groupContacts.reduce(
+					(uids, vCard) =>
+						parseVCardToJCard(vCard.data)
+							.filter(
+								(jCard) =>
+									jCard.key === "xAddressbookserverMember",
+							)
+							.map((jCard) =>
+								(jCard.value as string).replace(
+									"urn:uuid:",
+									"",
+								),
+							),
+					[] as string[],
+				);
+
+				// Keep only the cards that have a uid in the list
+				if (contactUids.length > 0) {
+					iCloudVCards = iCloudVCards.filter((vCard) =>
+						contactUids.some((uid) => vCard.data.includes(uid)),
+					);
+				}
+			}
 
 			const existingContacts = await this.getAllCurrentContacts(
 				this.settings.folder,
@@ -512,14 +544,22 @@ export default class ICloudContactsApi {
 		a: ICloudContactsSettings,
 		b: ICloudContactsSettings,
 	) {
-		const result = Object.entries(a)
+		return Object.entries(a)
 			.filter(
 				([key]) =>
-					key !== "previousUpdateSettings" &&
-					key !== "previousUpdateData",
+					key !== "previousUpdateSettings" && key !== "previousUpdateData",
 			)
-			.every(([key, value]) => value == b[key]);
-		return result;
+			.every(([key, value]) => {
+				const other = b[key];
+
+				// Handle array settings (like `groups`) by value, not reference
+				if (Array.isArray(value) && Array.isArray(other)) {
+					if (value.length !== other.length) return false;
+					return value.every((v, i) => v === other[i]);
+				}
+
+				return value == other;
+			});
 	}
 
 	private async createErrorFile() {

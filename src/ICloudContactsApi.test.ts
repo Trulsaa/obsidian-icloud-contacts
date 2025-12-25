@@ -115,6 +115,7 @@ const MOCK_DEFAULT_SETTINGS: ICloudContactsSettings = {
 		"n photo prodid rev uid version xAbadr xAbLabel xAblabel xAbShowAs xImagehash xImagetype xSharedPhotoDisplayPref xAddressingGrammar xAppleSubadministrativearea xAppleSublocality",
 	settingsChanged: false,
 	iCloudServerUrl: "https://contacts.icloud.com",
+	groups: [],
 	previousUpdateSettings: {
 		username: "username",
 		password: "password",
@@ -131,6 +132,7 @@ const MOCK_DEFAULT_SETTINGS: ICloudContactsSettings = {
 		iCloudServerUrl: "https://contacts.icloud.com",
 		previousUpdateSettings: undefined,
 		previousUpdateData: [],
+		groups: [],
 	},
 	previousUpdateData: [],
 };
