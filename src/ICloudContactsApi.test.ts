@@ -1534,7 +1534,7 @@ describe("updateContacts", () => {
 			mockNoticeShower.mock.calls[mockNoticeShower.mock.calls.length - 1];
 		const summaryMessage = summaryCall[0] as string;
 		expect(summaryMessage).toContain(
-			"All contacts where updated to reflect new settings",
+			"All contacts were updated to reflect new settings",
 		);
 	});
 
@@ -1570,7 +1570,7 @@ describe("updateContacts", () => {
 			mockNoticeShower.mock.calls[mockNoticeShower.mock.calls.length - 1];
 		const summaryMessage = summaryCall[0] as string;
 		expect(summaryMessage).not.toContain(
-			"All contacts where updated to reflect new settings",
+			"All contacts were updated to reflect new settings",
 		);
 	});
 });

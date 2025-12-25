@@ -245,7 +245,8 @@ export class SettingTab extends PluginSettingTab {
 			this.plugin.settings.username,
 			this.plugin.settings.password,
 			this.plugin.settings.iCloudServerUrl,
-		).then((contacts) => {
+		)
+			.then((contacts) => {
 			// get groups
 			const groups = contacts
 				.map((iCloudVCard) => parseVCardToJCard(iCloudVCard.data))
@@ -254,6 +255,16 @@ export class SettingTab extends PluginSettingTab {
 						(o) => o.key === "xAddressbookserverKind",
 					);
 					return kindJCard && kindJCard.value === "group";
+				})
+				.catch((error) => {
+					loadingWrapper.remove();
+					containerEl.createEl("p", {
+						text:
+							"Error loading groups: " +
+							(error instanceof Error
+								? error.message
+								: String(error)),
+					});
 				});
 
 			loadingWrapper.remove();
