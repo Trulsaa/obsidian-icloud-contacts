@@ -247,74 +247,74 @@ export class SettingTab extends PluginSettingTab {
 			this.plugin.settings.iCloudServerUrl,
 		)
 			.then((contacts) => {
-			// get groups
-			const groups = contacts
-				.map((iCloudVCard) => parseVCardToJCard(iCloudVCard.data))
-				.filter((jCard) => {
-					const kindJCard = jCard.find(
-						(o) => o.key === "xAddressbookserverKind",
-					);
-					return kindJCard && kindJCard.value === "group";
-				})
-				.catch((error) => {
-					loadingWrapper.remove();
-					containerEl.createEl("p", {
-						text:
-							"Error loading groups: " +
-							(error instanceof Error
-								? error.message
-								: String(error)),
+				// get groups
+				const groups = contacts
+					.map((iCloudVCard) => parseVCardToJCard(iCloudVCard.data))
+					.filter((jCard) => {
+						const kindJCard = jCard.find(
+							(o) => o.key === "xAddressbookserverKind",
+						);
+						return kindJCard && kindJCard.value === "group";
 					});
-				});
 
-			loadingWrapper.remove();
+				loadingWrapper.remove();
 
-			if (groups.length === 0) {
-				containerEl.createEl("p", {
-					text: "No groups found",
-				});
-			}
+				if (groups.length === 0) {
+					containerEl.createEl("p", {
+						text: "No groups found",
+					});
+				}
 
-			if (groups.length > 0) {
-				for (const group of groups) {
-					const fnJCard = group.find((o) => o.key === "fn");
-					const uidJCard = group.find((o) => o.key === "uid");
+				if (groups.length > 0) {
+					for (const group of groups) {
+						const fnJCard = group.find((o) => o.key === "fn");
+						const uidJCard = group.find((o) => o.key === "uid");
 
-					if (
-						fnJCard &&
-						!Array.isArray(fnJCard.value) &&
-						uidJCard &&
-						!Array.isArray(uidJCard.value)
-					) {
-						new Setting(containerEl)
-							.setName(fnJCard.value)
-							.addToggle((bool) =>
-								bool
-									.setValue(
-										this.plugin.settings.groups.includes(
-											uidJCard.value as string,
-										),
-									)
-									.onChange(async (value) => {
-										if (value) {
-											this.plugin.settings.groups.push(
+						if (
+							fnJCard &&
+							!Array.isArray(fnJCard.value) &&
+							uidJCard &&
+							!Array.isArray(uidJCard.value)
+						) {
+							new Setting(containerEl)
+								.setName(fnJCard.value)
+								.addToggle((bool) =>
+									bool
+										.setValue(
+											this.plugin.settings.groups.includes(
 												uidJCard.value as string,
-											);
-										} else {
-											this.plugin.settings.groups =
-												this.plugin.settings.groups.filter(
-													(i) =>
-														i !==
-														(uidJCard.value as string),
+											),
+										)
+										.onChange(async (value) => {
+											if (value) {
+												this.plugin.settings.groups.push(
+													uidJCard.value as string,
 												);
-										}
-										await this.plugin.saveSettings();
-									}),
-							);
+											} else {
+												this.plugin.settings.groups =
+													this.plugin.settings.groups.filter(
+														(i) =>
+															i !==
+															(uidJCard.value as string),
+													);
+											}
+											await this.plugin.saveSettings();
+										}),
+								);
+						}
 					}
 				}
-			}
-		});
+			})
+			.catch((error) => {
+				loadingWrapper.remove();
+				containerEl.createEl("p", {
+					text:
+						"Error loading groups: " +
+						(error instanceof Error
+							? error.message
+							: String(error)),
+				});
+			});
 	}
 
 	private ensureStyles(): void {
