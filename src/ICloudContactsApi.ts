@@ -1,5 +1,6 @@
 import { ICloudContactsSettings } from "./SettingTab";
 import { createFrontmatter } from "./frontMatter";
+import { parseVCardToJCard } from "./parser";
 
 export type ICloudVCard = {
 	url: string;
@@ -122,6 +123,7 @@ export default class ICloudContactsApi {
 			`${pluginName}: Updating contacts...`,
 			0,
 		);
+		let interval: ReturnType<typeof setInterval> | null = null;
 
 		try {
 			this.validateSettings();
@@ -129,7 +131,7 @@ export default class ICloudContactsApi {
 
 			// Starte a interval that sets setMessage every 1 second
 			let nDots = 0;
-			const interval = setInterval(() => {
+			interval = setInterval(() => {
 				// Update the number ofr dots at the end every secoon
 				if (nDots > 3) nDots = 0;
 				// Pad the number of dots to 3
@@ -140,12 +142,51 @@ export default class ICloudContactsApi {
 				nDots++;
 			}, 500);
 
-			const iCloudVCards = await this.fetchContacts(
+			let iCloudVCards = await this.fetchContacts(
 				this.settings.username,
 				this.settings.password,
 				this.settings.iCloudServerUrl,
 			);
-			clearInterval(interval);
+
+			if (this.settings.groups.length > 0) {
+				// Find all chosen group cards
+				const groupVCards = iCloudVCards.filter(
+					(vCard) =>
+						// Only include group cards
+						this.isGroupCard(vCard) &&
+						// That are in the selected groups
+						parseVCardToJCard(vCard.data)
+							.filter((jCard) => jCard.key === "uid")
+							.filter((jCard) =>
+								this.settings.groups.some(
+									(id) => id === (jCard.value as string),
+								),
+							).length > 0,
+				);
+
+				// Create a list of all uids in the group cards
+				const contactUids = groupVCards.flatMap((vCard) =>
+					parseVCardToJCard(vCard.data)
+						.filter(
+							(jCard) => jCard.key === "xAddressbookserverMember",
+						)
+						.map((jCard) =>
+							(jCard.value as string).replace("urn:uuid:", ""),
+						),
+				);
+
+				// Keep only the cards that have a uid in the list from the selected groups
+				iCloudVCards = iCloudVCards.filter((vCard) =>
+					contactUids.some((uid) =>
+						vCard.data.includes("UID:" + uid),
+					),
+				);
+			}
+
+			// Remove group vCards so only actual contact cards are processed
+			iCloudVCards = iCloudVCards.filter(
+				(vCard) => !this.isGroupCard(vCard),
+			);
 
 			const existingContacts = await this.getAllCurrentContacts(
 				this.settings.folder,
@@ -181,6 +222,8 @@ export default class ICloudContactsApi {
 			this.handleError("Error when running updateContacts", e, {
 				options,
 			});
+		} finally {
+			if (interval) clearInterval(interval);
 		}
 		const usedSettings = { ...this.settings };
 
@@ -199,6 +242,10 @@ export default class ICloudContactsApi {
 		this.skippedContacts = [];
 
 		return { updateData, usedSettings };
+	}
+
+	private isGroupCard(vCard: ICloudVCard) {
+		return vCard.data.includes("X-ADDRESSBOOKSERVER-KIND:group");
 	}
 
 	private validateSettings() {
@@ -264,7 +311,7 @@ export default class ICloudContactsApi {
 		noticeText += `Deleted ${deletedCount}\n`;
 		noticeText += `Skipped ${skippedCount}\n`;
 		if (haveSettingsChanged)
-			noticeText += "All contacts where updated to reflect new settings";
+			noticeText += "All contacts were updated to reflect new settings";
 		if (newCount + modifiedCount + deletedCount === 0)
 			noticeText += "Already up to date";
 		this.showNotice(noticeText, 7000);
@@ -512,14 +559,25 @@ export default class ICloudContactsApi {
 		a: ICloudContactsSettings,
 		b: ICloudContactsSettings,
 	) {
-		const result = Object.entries(a)
+		return Object.entries(a)
 			.filter(
 				([key]) =>
 					key !== "previousUpdateSettings" &&
 					key !== "previousUpdateData",
 			)
-			.every(([key, value]) => value == b[key]);
-		return result;
+			.every(([key, value]) => {
+				const other = b[key];
+
+				// Handle array settings (like `groups`) by value, not reference
+				if (Array.isArray(value) && Array.isArray(other)) {
+					if (value.length !== other.length) return false;
+					const sortedValue = [...value].sort();
+					const sortedOther = [...other].sort();
+					return sortedValue.every((v, i) => v === sortedOther[i]);
+				}
+
+				return value == other;
+			});
 	}
 
 	private async createErrorFile() {

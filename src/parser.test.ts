@@ -478,7 +478,7 @@ const parseVCardTestCases = [
 	return [vCardString, expected];
 });
 
-const getFullNameFromVCardTestCases = [
+const fullNameFromVCardTestCases = [
 	["ORG:Belhaven;\r\nX-ABShowAs:COMPANY", "Belhaven"],
 	["FN:\r\nN:Tomsen;Tom;;;", "Tom Tomsen"],
 	["N:Tomsen;Tom;;;\r\nFN:Tom Tomsen", "Tom Tomsen"],
@@ -496,6 +496,35 @@ const getFullNameFromVCardTestCases = [
 	],
 ];
 
+const groupMembersTestCases = [
+	[
+		"BEGIN:VCARD\r\nVERSION:3.0\r\nPRODID:-//Apple Inc.//AddressBookCore 1.0//EN\r\nN:b team\r\nFN:b team\r\nX-ADDRESSBOOKSERVER-KIND:group\r\nX-ADDRESSBOOKSERVER-MEMBER:urn:uuid:18d0ad57-707e-45ec-8ead-39b13d21c082\r\nX-ADDRESSBOOKSERVER-MEMBER:urn:uuid:8372cb90-f2a5-499e-9aac-9d28a258dfbc\r\nREV:2025-01-28T11:22:23Z\r\nUID:57792e81-2822-4e56-b064-ea159c75ca9b\r\nEND:VCARD",
+		[
+			{ key: "version", value: "3.0" },
+			{ key: "prodid", value: "-//Apple Inc.//AddressBookCore 1.0//EN" },
+			{ key: "n", value: ["b team"] },
+			{ key: "fn", value: "b team" },
+			{ key: "xAddressbookserverKind", value: "group" },
+			{
+				key: "xAddressbookserverMember",
+				value: "urn:uuid:18d0ad57-707e-45ec-8ead-39b13d21c082",
+			},
+			{
+				key: "xAddressbookserverMember",
+				value: "urn:uuid:8372cb90-f2a5-499e-9aac-9d28a258dfbc",
+			},
+			{ key: "rev", value: "2025-01-28T11:22:23Z" },
+			{ key: "uid", value: "57792e81-2822-4e56-b064-ea159c75ca9b" },
+		],
+	],
+].map(([vCardString, expected]: any) => {
+	for (const e of expected) {
+		if (!e.meta) e.meta = {};
+		if (!e.type) e.type = "text";
+	}
+	return [vCardString, expected];
+});
+
 describe("parser", () => {
 	describe("parseVCardToJCard", () => {
 		test.each(parseVCardTestCases)(
@@ -510,12 +539,21 @@ describe("parser", () => {
 	});
 
 	describe("getFullNameFromVCard", () => {
-		test.each(getFullNameFromVCardTestCases)(
+		test.each(fullNameFromVCardTestCases)(
 			"Should get fullname from %s",
 			(vCardString: string, expected: string) => {
 				expect(getFullNameFromVCard(padVCard(vCardString))).toEqual(
 					expected,
 				);
+			},
+		);
+	});
+
+	describe("parse group card", () => {
+		test.each(groupMembersTestCases)(
+			"Should parse group from %s",
+			(vCardString: string, expected: string) => {
+				expect(parseVCardToJCard(vCardString)).toEqual(expected);
 			},
 		);
 	});
