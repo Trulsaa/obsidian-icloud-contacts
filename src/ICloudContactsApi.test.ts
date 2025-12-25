@@ -1125,6 +1125,159 @@ describe("updateContacts", () => {
 		});
 	});
 
+	test("Should ignore group vCards themselves and only create files for contact vCards", async () => {
+		const groupUid = "group-uid-123";
+		const contactUid = "contact-uid-123";
+
+		const groupVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/group.vcf",
+			etag: '"group-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				`UID:${groupUid}\r\n` +
+				"X-ADDRESSBOOKSERVER-KIND:group\r\n" +
+				`X-ADDRESSBOOKSERVER-MEMBER:urn:uuid:${contactUid}\r\n` +
+				"END:VCARD",
+		};
+
+		const contactVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/contact.vcf",
+			etag: '"contact-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				"N:Doe;Contact;;;\r\n" +
+				"FN:Contact Doe\r\n" +
+				`UID:${contactUid}\r\n` +
+				"EMAIL;type=INTERNET;type=HOME;type=pref:contact@example.com\r\n" +
+				"TEL;type=pref:11111111\r\n" +
+				"END:VCARD",
+		};
+
+		mockFetchContacts.mockResolvedValueOnce([groupVCard, contactVCard]);
+
+		const mockFrontMatter: any = {};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => {
+				fn(mockFrontMatter);
+			},
+		);
+
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			MOCK_DEFAULT_SETTINGS,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+
+		// Even though fetchContacts returned both a group vCard and a contact vCard,
+		// only the contact vCard should result in a created file.
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledTimes(1);
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledWith(
+			"Contacts/Contact Doe.md",
+			"# Contact Doe",
+		);
+		expect(mockFrontMatter).toEqual({
+			name: "Contact Doe",
+			email: ["contact@example.com"],
+			telephone: ["11111111"],
+			iCloudVCard: JSON.stringify(contactVCard),
+		});
+	});
+
+	test("Should handle multiple selected groups and not duplicate contact files when a contact is in several groups", async () => {
+		const groupUid1 = "group-uid-1";
+		const groupUid2 = "group-uid-2";
+		const sharedContactUid = "shared-contact-uid";
+
+		const groupVCard1: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/group1.vcf",
+			etag: '"group1-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				`UID:${groupUid1}\r\n` +
+				"X-ADDRESSBOOKSERVER-KIND:group\r\n" +
+				`X-ADDRESSBOOKSERVER-MEMBER:urn:uuid:${sharedContactUid}\r\n` +
+				"END:VCARD",
+		};
+
+		const groupVCard2: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/group2.vcf",
+			etag: '"group2-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				`UID:${groupUid2}\r\n` +
+				"X-ADDRESSBOOKSERVER-KIND:group\r\n" +
+				`X-ADDRESSBOOKSERVER-MEMBER:urn:uuid:${sharedContactUid}\r\n` +
+				"END:VCARD",
+		};
+
+		const sharedContactVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/shared-contact.vcf",
+			etag: '"shared-contact-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				"N:Doe;Shared;;;\r\n" +
+				"FN:Shared Doe\r\n" +
+				`UID:${sharedContactUid}\r\n` +
+				"EMAIL;type=INTERNET;type=HOME;type=pref:shared@example.com\r\n" +
+				"TEL;type=pref:33333333\r\n" +
+				"END:VCARD",
+		};
+
+		mockFetchContacts.mockResolvedValueOnce([
+			groupVCard1,
+			groupVCard2,
+			sharedContactVCard,
+		]);
+
+		const mockFrontMatter: any = {};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => {
+				fn(mockFrontMatter);
+			},
+		);
+
+		const settingsWithMultipleGroups: ICloudContactsSettings = {
+			...MOCK_DEFAULT_SETTINGS,
+			groups: [groupUid1, groupUid2],
+		};
+
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			settingsWithMultipleGroups,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+
+		// The contact is a member of two selected groups,
+		// but only a single contact file should be created.
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledTimes(1);
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledWith(
+			"Contacts/Shared Doe.md",
+			"# Shared Doe",
+		);
+		expect(mockFrontMatter).toEqual({
+			name: "Shared Doe",
+			email: ["shared@example.com"],
+			telephone: ["33333333"],
+			iCloudVCard: JSON.stringify(sharedContactVCard),
+		});
+	});
+
 	test("Should not create any files when selected groups have no members", async () => {
 		const groupUid = "group-uid-with-no-members";
 
@@ -1176,5 +1329,247 @@ describe("updateContacts", () => {
 
 		// No contact files should be created when the selected groups have no members
 		expect(mockObsidianApi.app.vault.create).not.toHaveBeenCalled();
+	});
+	
+	test("Should detect settings change when groups array content changes", async () => {
+		const groupUid1 = "group-uid-1";
+		const groupUid2 = "group-uid-2";
+		const contactUid1 = "contact-uid-1";
+		const contactUid2 = "contact-uid-2";
+
+		const groupVCard1: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/group1.vcf",
+			etag: '"group1-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				`UID:${groupUid1}\r\n` +
+				"X-ADDRESSBOOKSERVER-KIND:group\r\n" +
+				`X-ADDRESSBOOKSERVER-MEMBER:urn:uuid:${contactUid1}\r\n` +
+				"END:VCARD",
+		};
+
+		const groupVCard2: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/group2.vcf",
+			etag: '"group2-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				`UID:${groupUid2}\r\n` +
+				"X-ADDRESSBOOKSERVER-KIND:group\r\n" +
+				`X-ADDRESSBOOKSERVER-MEMBER:urn:uuid:${contactUid2}\r\n` +
+				"END:VCARD",
+		};
+
+		const contactVCard1: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/contact1.vcf",
+			etag: '"contact1-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				"N:Doe;ContactOne;;;\r\n" +
+				"FN:Contact One\r\n" +
+				`UID:${contactUid1}\r\n` +
+				"EMAIL;type=INTERNET;type=HOME;type=pref:contactone@example.com\r\n" +
+				"TEL;type=pref:11111111\r\n" +
+				"END:VCARD",
+		};
+
+		const contactVCard2: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/contact2.vcf",
+			etag: '"contact2-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				"N:Doe;ContactTwo;;;\r\n" +
+				"FN:Contact Two\r\n" +
+				`UID:${contactUid2}\r\n` +
+				"EMAIL;type=INTERNET;type=HOME;type=pref:contacttwo@example.com\r\n" +
+				"TEL;type=pref:22222222\r\n" +
+				"END:VCARD",
+		};
+
+		// First run: groups contains only groupUid1, so only Contact One is created.
+		mockFetchContacts.mockResolvedValueOnce([
+			groupVCard1,
+			groupVCard2,
+			contactVCard1,
+			contactVCard2,
+		]);
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: [],
+			folders: [],
+		});
+
+		const firstRunSettings: ICloudContactsSettings = {
+			...MOCK_DEFAULT_SETTINGS,
+			groups: [groupUid1],
+			previousUpdateSettings: undefined,
+			previousUpdateData: [],
+		};
+
+		const apiFirst = new ICloudContactsApi(
+			mockObsidianApi,
+			firstRunSettings,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		const { updateData, usedSettings } = await apiFirst.updateContacts();
+
+		// Verify that the first run created the file for Contact One
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledTimes(1);
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledWith(
+			"Contacts/Contact One.md",
+			"# Contact One",
+		);
+
+		// Prepare mocks for the second run: one existing file for Contact One
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Contact One.md"],
+			folders: [],
+		});
+		mockObsidianApi.app.metadataCache.getCache.mockImplementation(
+			(path: string) => {
+				if (path === "Contacts/Contact One.md") {
+					return {
+						frontmatter: {
+							name: "Contact One",
+							iCloudVCard: JSON.stringify(contactVCard1),
+						},
+					};
+				}
+				return null;
+			},
+		);
+		mockObsidianApi.app.vault.getFileByPath.mockImplementation(
+			(path: string) => {
+				if (path === "Contacts/Contact One.md") {
+					return { basename: "Contact One" } as any;
+				}
+				return null;
+			},
+		);
+
+		// Second run: groups contains only groupUid2, so Contact One
+		// should be moved to the Deleted folder and Contact Two created.
+		mockFetchContacts.mockResolvedValueOnce([
+			groupVCard1,
+			groupVCard2,
+			contactVCard1,
+			contactVCard2,
+		]);
+
+		const secondRunSettings: ICloudContactsSettings = {
+			...MOCK_DEFAULT_SETTINGS,
+			groups: [groupUid2],
+			previousUpdateSettings: usedSettings,
+			previousUpdateData: updateData,
+		};
+
+		const apiSecond = new ICloudContactsApi(
+			mockObsidianApi,
+			secondRunSettings,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await apiSecond.updateContacts();
+
+		// Existing file (Contact One) should have been moved to the Deleted folder
+		expect(
+			mockObsidianApi.app.fileManager.renameFile,
+		).toHaveBeenCalledTimes(1);
+		expect(
+			mockObsidianApi.app.fileManager.renameFile,
+		).toHaveBeenCalledWith(
+			{ basename: "Contact One" },
+			"Contacts/Deleted/Contact One.md",
+		);
+
+		// And a new file for Contact Two should have been created
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledTimes(2);
+		expect(mockObsidianApi.app.vault.create).toHaveBeenNthCalledWith(
+			2,
+			"Contacts/Contact Two.md",
+			"# Contact Two",
+		);
+	});
+
+	test("Should detect settings change when groups array length changes", async () => {
+		mockFetchContacts.mockResolvedValueOnce([]);
+
+		const previousSettings: ICloudContactsSettings = {
+			...MOCK_DEFAULT_SETTINGS,
+			groups: [],
+			previousUpdateSettings: undefined,
+			previousUpdateData: [],
+		};
+
+		const currentSettings: ICloudContactsSettings = {
+			...MOCK_DEFAULT_SETTINGS,
+			groups: ["group-uid-1"],
+			previousUpdateSettings: previousSettings,
+			previousUpdateData: [],
+		};
+
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			currentSettings,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+
+		// The final summary notice should indicate that settings changed
+		// and that all contacts were updated to reflect the new settings.
+		expect(mockNoticeShower).toHaveBeenCalledTimes(2);
+		const summaryCall =
+			mockNoticeShower.mock.calls[mockNoticeShower.mock.calls.length - 1];
+		const summaryMessage = summaryCall[0] as string;
+		expect(summaryMessage).toContain(
+			"All contacts where updated to reflect new settings",
+		);
+	});
+
+	test("Should only compare array settings like groups by value and not by reference", async () => {
+		mockFetchContacts.mockResolvedValueOnce([]);
+
+		const previousSettings: ICloudContactsSettings = {
+			...MOCK_DEFAULT_SETTINGS,
+			groups: ["group-uid-1"],
+			previousUpdateSettings: undefined,
+			previousUpdateData: [],
+		};
+
+		const currentSettings: ICloudContactsSettings = {
+			...MOCK_DEFAULT_SETTINGS,
+			groups: ["group-uid-1"], // same content as previousSettings.groups but different array reference
+			previousUpdateSettings: previousSettings,
+			previousUpdateData: [],
+		};
+
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			currentSettings,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+
+		// When the groups arrays have the same values, a settings change
+		// should not be detected even if the array instances differ.
+		const summaryCall =
+			mockNoticeShower.mock.calls[mockNoticeShower.mock.calls.length - 1];
+		const summaryMessage = summaryCall[0] as string;
+		expect(summaryMessage).not.toContain(
+			"All contacts where updated to reflect new settings",
+		);
 	});
 });
