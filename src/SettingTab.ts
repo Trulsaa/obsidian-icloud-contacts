@@ -64,6 +64,8 @@ export class SettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
+		this.ensureStyles();
+
 		new Setting(containerEl)
 			.setName("iCloud username")
 			.setDesc("The email used to login to iCloud")
@@ -233,9 +235,11 @@ export class SettingTab extends PluginSettingTab {
 
 		containerEl.createEl("br");
 		containerEl.createEl("h3", { text: "Groups" });
-		const loadingElement = containerEl.createEl("small", {
-			text: "Loading groups...",
+		const loadingWrapper = containerEl.createDiv({
+			cls: "icloud-contacts-loading",
 		});
+		loadingWrapper.createDiv({ cls: "icloud-contacts-spinner" });
+		loadingWrapper.createEl("small", { text: "Loading groups..." });
 
 		this.fetchContacts(
 			this.plugin.settings.username,
@@ -252,7 +256,7 @@ export class SettingTab extends PluginSettingTab {
 					return kindJCard && kindJCard.value === "group";
 				});
 
-			loadingElement.remove();
+			loadingWrapper.remove();
 
 			if (groups.length === 0) {
 				containerEl.createEl("p", {
@@ -300,5 +304,38 @@ export class SettingTab extends PluginSettingTab {
 				}
 			}
 		});
+	}
+
+	private ensureStyles(): void {
+		if (document.getElementById("icloud-contacts-settings-style")) {
+			return;
+		}
+
+		const style = document.createElement("style");
+		style.id = "icloud-contacts-settings-style";
+		style.textContent = `
+.icloud-contacts-loading {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.icloud-contacts-spinner {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	border: 2px solid var(--text-muted);
+	border-top-color: transparent;
+	animation: icloud-contacts-spin 0.8s linear infinite;
+}
+
+@keyframes icloud-contacts-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+`;
+
+		document.head.appendChild(style);
 	}
 }
