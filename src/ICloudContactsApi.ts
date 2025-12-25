@@ -123,6 +123,7 @@ export default class ICloudContactsApi {
 			`${pluginName}: Updating contacts...`,
 			0,
 		);
+		let interval: ReturnType<typeof setInterval> | null = null;
 
 		try {
 			this.validateSettings();
@@ -130,7 +131,7 @@ export default class ICloudContactsApi {
 
 			// Starte a interval that sets setMessage every 1 second
 			let nDots = 0;
-			const interval = setInterval(() => {
+			interval = setInterval(() => {
 				// Update the number ofr dots at the end every secoon
 				if (nDots > 3) nDots = 0;
 				// Pad the number of dots to 3
@@ -146,7 +147,6 @@ export default class ICloudContactsApi {
 				this.settings.password,
 				this.settings.iCloudServerUrl,
 			);
-			clearInterval(interval);
 
 			if (this.settings.groups.length > 0) {
 				// Finnd al chosen group cards
@@ -222,6 +222,8 @@ export default class ICloudContactsApi {
 			this.handleError("Error when running updateContacts", e, {
 				options,
 			});
+		} finally {
+			if (interval) clearInterval(interval);
 		}
 		const usedSettings = { ...this.settings };
 

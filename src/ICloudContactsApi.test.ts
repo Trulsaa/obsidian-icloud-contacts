@@ -142,12 +142,13 @@ const mockListedFiles = {
 	folders: [],
 };
 
+
 describe("updateContacts", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 	});
 
-	test("Should handle no files of iCloudVCards", () => {
+	test("Should handle no files of iCloudVCards", async () => {
 		mockFetchContacts.mockResolvedValueOnce([]);
 		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce(
 			mockListedFiles,
@@ -159,7 +160,7 @@ describe("updateContacts", () => {
 			mockFetchContacts,
 			mockNoticeShower,
 		);
-		expect(api.updateContacts()).resolves.not.toThrow();
+		await expect(api.updateContacts()).resolves.not.toThrow();
 	});
 
 	test("Should write error to error file if fetchContacts rejects", async () => {
