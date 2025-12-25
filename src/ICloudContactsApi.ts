@@ -150,9 +150,20 @@ export default class ICloudContactsApi {
 
 			if (this.settings.groups.length > 0) {
 				// Finnd al chosen group cards
-				const groupVCards = iCloudVCards.filter((vCard) =>
-					this.settings.groups.some((id) => vCard.data.includes(id)),
-				);
+				const groupVCards = iCloudVCards
+					.filter((vCard) =>
+						vCard.data.includes("X-ADDRESSBOOKSERVER-KIND:group"),
+					)
+					.filter(
+						(vCard) =>
+							parseVCardToJCard(vCard.data)
+								.filter((jCard) => jCard.key === "uid")
+								.filter((jCard) =>
+									this.settings.groups.some(
+										(id) => id === (jCard.value as string),
+									),
+								).length > 0,
+					);
 
 				// Create a list of all uids in the group cards
 				const contactUids = groupVCards.flatMap((vCard) =>

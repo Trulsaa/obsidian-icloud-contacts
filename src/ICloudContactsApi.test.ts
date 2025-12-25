@@ -1018,4 +1018,110 @@ describe("updateContacts", () => {
 			"# NotInGroup Doe",
 		);
 	});
+
+	test("Should not create files for contacts that are only members of unselected groups", async () => {
+		const selectedGroupUid = "selected-group-uid";
+		const unselectedGroupUid = "unselected-group-uid";
+		const contactUidInSelectedGroup = "contact-uid-in-selected-group";
+		const contactUidOnlyInUnselectedGroup =
+			"contact-uid-only-in-unselected-group";
+
+		const selectedGroupVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/selected-group.vcf",
+			etag: '"selected-group-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				`UID:${selectedGroupUid}\r\n` +
+				"X-ADDRESSBOOKSERVER-KIND:group\r\n" +
+				`X-ADDRESSBOOKSERVER-MEMBER:urn:uuid:${contactUidInSelectedGroup}\r\n` +
+				"END:VCARD",
+		};
+
+		const unselectedGroupVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/unselected-group.vcf",
+			etag: '"unselected-group-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				`UID:${unselectedGroupUid}\r\n` +
+				"X-ADDRESSBOOKSERVER-KIND:group\r\n" +
+				`X-ADDRESSBOOKSERVER-MEMBER:urn:uuid:${contactUidOnlyInUnselectedGroup}\r\n` +
+				"END:VCARD",
+		};
+
+		const inSelectedGroupContactVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/in-selected-group.vcf",
+			etag: '"in-selected-group-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				"N:Doe;InSelectedGroup;;;\r\n" +
+				"FN:InSelectedGroup Doe\r\n" +
+				`UID:${contactUidInSelectedGroup}\r\n` +
+				"EMAIL;type=INTERNET;type=HOME;type=pref:inselected@example.com\r\n" +
+				"TEL;type=pref:11111111\r\n" +
+				"END:VCARD",
+		};
+
+		const onlyInUnselectedGroupContactVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/only-in-unselected-group.vcf",
+			etag: '"only-in-unselected-group-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				"N:Doe;OnlyInUnselectedGroup;;;\r\n" +
+				"FN:OnlyInUnselectedGroup Doe\r\n" +
+				`UID:${contactUidOnlyInUnselectedGroup}\r\n` +
+				"EMAIL;type=INTERNET;type=HOME;type=pref:onlyinunselected@example.com\r\n" +
+				"TEL;type=pref:22222222\r\n" +
+				"END:VCARD",
+		};
+
+		mockFetchContacts.mockResolvedValueOnce([
+			selectedGroupVCard,
+			unselectedGroupVCard,
+			inSelectedGroupContactVCard,
+			onlyInUnselectedGroupContactVCard,
+		]);
+
+		const mockFrontMatter: any = {};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => {
+				fn(mockFrontMatter);
+			},
+		);
+
+		const settingsWithSelectedGroup: ICloudContactsSettings = {
+			...MOCK_DEFAULT_SETTINGS,
+			groups: [selectedGroupUid],
+		};
+
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			settingsWithSelectedGroup,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+
+		// Should only have created a file for the contact that is a member of the selected group
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledTimes(1);
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledWith(
+			"Contacts/InSelectedGroup Doe.md",
+			"# InSelectedGroup Doe",
+		);
+		expect(mockFrontMatter).toEqual({
+			name: "InSelectedGroup Doe",
+			email: ["inselected@example.com"],
+			telephone: ["11111111"],
+			// The vCard stored in frontmatter should be the contact's vCard, not any group vCard
+			iCloudVCard: JSON.stringify(inSelectedGroupContactVCard),
+		});
+	});
 });
