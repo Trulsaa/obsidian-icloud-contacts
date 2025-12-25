@@ -165,17 +165,19 @@ export default class ICloudContactsApi {
 						),
 				);
 
-				// Keep only the cards that have a uid in the list
+				// Keep only the cards that have a uid in the list from the selected groups
 				if (contactUids.length > 0) {
-					iCloudVCards = iCloudVCards.filter(
-						(vCard) =>
-							!vCard.data.includes(
-								"X-ADDRESSBOOKSERVER-KIND:group",
-							) &&
-							contactUids.some((uid) => vCard.data.includes(uid)),
+					iCloudVCards = iCloudVCards.filter((vCard) =>
+						contactUids.some((uid) => vCard.data.includes(uid)),
 					);
 				}
 			}
+
+			// Remove group vCards so only actual contact cards are processed
+			iCloudVCards = iCloudVCards.filter(
+				(vCard) =>
+					!vCard.data.includes("X-ADDRESSBOOKSERVER-KIND:group"),
+			);
 
 			const existingContacts = await this.getAllCurrentContacts(
 				this.settings.folder,

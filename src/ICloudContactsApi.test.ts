@@ -937,4 +937,85 @@ describe("updateContacts", () => {
 		});
 	});
 
+	test("Should create files for all contacts if settings.groups is an empty array", async () => {
+		const groupUid = "group-uid-123";
+		const contactUidInGroup = "contact-uid-in-group";
+		const contactUidNotInGroup = "contact-uid-not-in-group";
+
+		const groupVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/group.vcf",
+			etag: '"group-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				`UID:${groupUid}\r\n` +
+				"X-ADDRESSBOOKSERVER-KIND:group\r\n" +
+				`X-ADDRESSBOOKSERVER-MEMBER:urn:uuid:${contactUidInGroup}\r\n` +
+				"END:VCARD",
+		};
+
+		const inGroupContactVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/in-group.vcf",
+			etag: '"in-group-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				"N:Doe;InGroup;;;\r\n" +
+				"FN:InGroup Doe\r\n" +
+				`UID:${contactUidInGroup}\r\n` +
+				"EMAIL;type=INTERNET;type=HOME;type=pref:ingroup@example.com\r\n" +
+				"TEL;type=pref:11111111\r\n" +
+				"END:VCARD",
+		};
+
+		const notInGroupContactVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/not-in-group.vcf",
+			etag: '"not-in-group-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				"N:Doe;NotInGroup;;;\r\n" +
+				"FN:NotInGroup Doe\r\n" +
+				`UID:${contactUidNotInGroup}\r\n` +
+				"EMAIL;type=INTERNET;type=HOME;type=pref:notingroup@example.com\r\n" +
+				"TEL;type=pref:22222222\r\n" +
+				"END:VCARD",
+		};
+
+		mockFetchContacts.mockResolvedValueOnce([
+			groupVCard,
+			inGroupContactVCard,
+			notInGroupContactVCard,
+		]);
+
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => {
+				fn({});
+			},
+		);
+
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			MOCK_DEFAULT_SETTINGS,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledTimes(2);
+		expect(mockObsidianApi.app.vault.create).toHaveBeenNthCalledWith(
+			1,
+			"Contacts/InGroup Doe.md",
+			"# InGroup Doe",
+		);
+		expect(mockObsidianApi.app.vault.create).toHaveBeenNthCalledWith(
+			2,
+			"Contacts/NotInGroup Doe.md",
+			"# NotInGroup Doe",
+		);
+	});
 });
