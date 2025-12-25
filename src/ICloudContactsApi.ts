@@ -150,31 +150,29 @@ export default class ICloudContactsApi {
 
 			if (this.settings.groups.length > 0) {
 				// Finnd al chosen group cards
-				const groupContacts = iCloudVCards.filter((vCard) =>
+				const groupVCards = iCloudVCards.filter((vCard) =>
 					this.settings.groups.some((id) => vCard.data.includes(id)),
 				);
 
 				// Create a list of all uids in the group cards
-				const contactUids = groupContacts.reduce(
-					(uids, vCard) =>
-						parseVCardToJCard(vCard.data)
-							.filter(
-								(jCard) =>
-									jCard.key === "xAddressbookserverMember",
-							)
-							.map((jCard) =>
-								(jCard.value as string).replace(
-									"urn:uuid:",
-									"",
-								),
-							),
-					[] as string[],
+				const contactUids = groupVCards.flatMap((vCard) =>
+					parseVCardToJCard(vCard.data)
+						.filter(
+							(jCard) => jCard.key === "xAddressbookserverMember",
+						)
+						.map((jCard) =>
+							(jCard.value as string).replace("urn:uuid:", ""),
+						),
 				);
 
 				// Keep only the cards that have a uid in the list
 				if (contactUids.length > 0) {
-					iCloudVCards = iCloudVCards.filter((vCard) =>
-						contactUids.some((uid) => vCard.data.includes(uid)),
+					iCloudVCards = iCloudVCards.filter(
+						(vCard) =>
+							!vCard.data.includes(
+								"X-ADDRESSBOOKSERVER-KIND:group",
+							) &&
+							contactUids.some((uid) => vCard.data.includes(uid)),
 					);
 				}
 			}
@@ -547,7 +545,8 @@ export default class ICloudContactsApi {
 		return Object.entries(a)
 			.filter(
 				([key]) =>
-					key !== "previousUpdateSettings" && key !== "previousUpdateData",
+					key !== "previousUpdateSettings" &&
+					key !== "previousUpdateData",
 			)
 			.every(([key, value]) => {
 				const other = b[key];

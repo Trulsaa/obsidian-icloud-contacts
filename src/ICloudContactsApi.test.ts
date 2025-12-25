@@ -845,4 +845,96 @@ describe("updateContacts", () => {
 
 		replaceMock.mockRestore();
 	});
+
+	test("Should only create files for the contacts that are in the settings.groups", async () => {
+		// vCard representing a group with a specific UID
+		const groupUid = "group-uid-123";
+		const contactUidInGroup = "contact-uid-in-group";
+		const contactUidNotInGroup = "contact-uid-not-in-group";
+
+		const groupVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/group.vcf",
+			etag: '"group-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				`UID:${groupUid}\r\n` +
+				"X-ADDRESSBOOKSERVER-KIND:group\r\n" +
+				`X-ADDRESSBOOKSERVER-MEMBER:urn:uuid:${contactUidInGroup}\r\n` +
+				"END:VCARD",
+		};
+
+		const inGroupContactVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/in-group.vcf",
+			etag: '"in-group-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				"N:Doe;InGroup;;;\r\n" +
+				"FN:InGroup Doe\r\n" +
+				`UID:${contactUidInGroup}\r\n` +
+				"EMAIL;type=INTERNET;type=HOME;type=pref:ingroup@example.com\r\n" +
+				"TEL;type=pref:11111111\r\n" +
+				"END:VCARD",
+		};
+
+		const notInGroupContactVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/not-in-group.vcf",
+			etag: '"not-in-group-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				"N:Doe;NotInGroup;;;\r\n" +
+				"FN:NotInGroup Doe\r\n" +
+				`UID:${contactUidNotInGroup}\r\n` +
+				"EMAIL;type=INTERNET;type=HOME;type=pref:notingroup@example.com\r\n" +
+				"TEL;type=pref:22222222\r\n" +
+				"END:VCARD",
+		};
+
+		mockFetchContacts.mockResolvedValueOnce([
+			groupVCard,
+			inGroupContactVCard,
+			notInGroupContactVCard,
+		]);
+
+		const mockFrontMatter: any = {};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => {
+				fn(mockFrontMatter);
+			},
+		);
+
+		const settingsWithGroup: ICloudContactsSettings = {
+			...MOCK_DEFAULT_SETTINGS,
+			groups: [groupUid],
+		};
+
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			settingsWithGroup,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+
+		// Should only have created a file for the contact that is a member of the selected group
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledTimes(1);
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledWith(
+			"Contacts/InGroup Doe.md",
+			"# InGroup Doe",
+		);
+		expect(mockFrontMatter).toEqual({
+			name: "InGroup Doe",
+			email: ["ingroup@example.com"],
+			telephone: ["11111111"],
+			// The vCard stored in frontmatter should be the contact's vCard, not the group vCard
+			iCloudVCard: JSON.stringify(inGroupContactVCard),
+		});
+	});
+
 });
