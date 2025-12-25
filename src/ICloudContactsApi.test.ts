@@ -1124,4 +1124,57 @@ describe("updateContacts", () => {
 			iCloudVCard: JSON.stringify(inSelectedGroupContactVCard),
 		});
 	});
+
+	test("Should not create any files when selected groups have no members", async () => {
+		const groupUid = "group-uid-with-no-members";
+
+		const groupVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/group-no-members.vcf",
+			etag: '"group-no-members-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				`UID:${groupUid}\r\n` +
+				"X-ADDRESSBOOKSERVER-KIND:group\r\n" +
+				"END:VCARD",
+		};
+
+		// A regular contact vCard that is not a member of the selected group
+		const contactVCard: ICloudVCard = {
+			url: "https://contacts.icloud.com/123456789/carddavhome/card/contact-not-in-group.vcf",
+			etag: '"contact-not-in-group-etag"',
+			data:
+				"BEGIN:VCARD\r\n" +
+				"VERSION:3.0\r\n" +
+				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
+				"N:Doe;NotInGroup;;;}\r\n" +
+				"FN:NotInGroup Doe\r\n" +
+				"UID:contact-uid-not-in-group\r\n" +
+				"EMAIL;type=INTERNET;type=HOME;type=pref:notingroup@example.com\r\n" +
+				"TEL;type=pref:22222222\r\n" +
+				"END:VCARD",
+		};
+
+		// The selected group has no members, and the only contact
+		// returned is not in that group
+		mockFetchContacts.mockResolvedValueOnce([groupVCard, contactVCard]);
+
+		const settingsWithGroup: ICloudContactsSettings = {
+			...MOCK_DEFAULT_SETTINGS,
+			groups: [groupUid],
+		};
+
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			settingsWithGroup,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+
+		// No contact files should be created when the selected groups have no members
+		expect(mockObsidianApi.app.vault.create).not.toHaveBeenCalled();
+	});
 });
