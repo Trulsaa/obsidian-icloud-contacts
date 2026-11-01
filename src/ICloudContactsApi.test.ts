@@ -146,7 +146,6 @@ const mockListedFiles = {
 	folders: [],
 };
 
-
 describe("updateContacts", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -942,6 +941,198 @@ describe("updateContacts", () => {
 		});
 	});
 
+	describe("lists property", () => {
+		beforeEach(() => {
+			mockObsidianApi.app.fileManager.processFrontMatter.mockReset();
+			mockObsidianApi.app.metadataCache.getCache.mockReset();
+			mockObsidianApi.app.vault.adapter.list.mockReset();
+			mockObsidianApi.app.vault.adapter.list.mockResolvedValue(
+				mockListedFiles,
+			);
+			mockObsidianApi.app.vault.getFileByPath.mockReset();
+			mockObsidianApi.app.vault.getFileByPath.mockReturnValue("TFile");
+		});
+
+		const makeGroup = (
+			uid: string,
+			name: string | undefined,
+			members: string[],
+		) => ({
+			url: `https://contacts.icloud.com/123456789/carddavhome/card/${uid}.vcf`,
+			etag: `"${uid}-etag"`,
+			data:
+				"BEGIN:VCARD\r\nVERSION:3.0\r\n" +
+				(name ? `FN:${name}\r\n` : "") +
+				`UID:${uid}\r\n` +
+				"X-ADDRESSBOOKSERVER-KIND:group\r\n" +
+				members
+					.map((m) => `X-ADDRESSBOOKSERVER-MEMBER:urn:uuid:${m}\r\n`)
+					.join("") +
+				"END:VCARD",
+		});
+		const makeContact = (uid: string, name: string) => ({
+			url: `https://contacts.icloud.com/123456789/carddavhome/card/${uid}.vcf`,
+			etag: `"${uid}-etag"`,
+			data: `BEGIN:VCARD\r\nVERSION:3.0\r\nN:Doe;${name};;;\r\nFN:${name} Doe\r\nUID:${uid}\r\nEND:VCARD`,
+		});
+
+		test("Should add sorted list names to contacts, ignoring lists without a name", async () => {
+			mockFetchContacts.mockResolvedValueOnce([
+				makeGroup("g-work", "Work", ["alice"]),
+				makeGroup("g-family", "Family", ["alice", "bob"]),
+				makeGroup("g-noname", undefined, ["bob", "carol"]),
+				makeContact("alice", "Alice"),
+				makeContact("bob", "Bob"),
+				makeContact("carol", "Carol"),
+			]);
+			const frontMatters: any[] = [{}, {}, {}];
+			for (const fm of frontMatters) {
+				mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+					async (_file: any, fn: any) => fn(fm),
+				);
+			}
+
+			const api = new ICloudContactsApi(
+				mockObsidianApi,
+				{
+					...MOCK_DEFAULT_SETTINGS,
+					listsProperty: true,
+					previousUpdateSettings: undefined,
+				},
+				mockFetchContacts,
+				mockNoticeShower,
+			);
+			await api.updateContacts();
+
+			expect(frontMatters[0].lists).toEqual(["Family", "Work"]);
+			expect(frontMatters[1].lists).toEqual(["Family"]);
+			expect(frontMatters[2]).not.toHaveProperty("lists");
+		});
+
+		test("Should add lists without limiting which contacts are synced", async () => {
+			mockFetchContacts.mockResolvedValueOnce([
+				makeGroup("g-family", "Family", ["alice"]),
+				makeContact("alice", "Alice"),
+				makeContact("bob", "Bob"),
+			]);
+			mockObsidianApi.app.fileManager.processFrontMatter.mockImplementation(
+				async (_file: any, fn: any) => fn({}),
+			);
+
+			const api = new ICloudContactsApi(
+				mockObsidianApi,
+				{
+					...MOCK_DEFAULT_SETTINGS,
+					listsProperty: true,
+					previousUpdateSettings: undefined,
+				},
+				mockFetchContacts,
+				mockNoticeShower,
+			);
+			await api.updateContacts();
+
+			expect(mockObsidianApi.app.vault.create).toHaveBeenCalledTimes(2);
+		});
+
+		test("Should not add lists when the setting is off", async () => {
+			mockFetchContacts.mockResolvedValueOnce([
+				makeGroup("g-family", "Family", ["alice"]),
+				makeContact("alice", "Alice"),
+			]);
+			const fm: any = {};
+			mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+				async (_file: any, fn: any) => fn(fm),
+			);
+
+			const api = new ICloudContactsApi(
+				mockObsidianApi,
+				MOCK_DEFAULT_SETTINGS,
+				mockFetchContacts,
+				mockNoticeShower,
+			);
+			await api.updateContacts();
+
+			expect(fm).not.toHaveProperty("lists");
+		});
+
+		test("Should update an existing contact when its lists change but its etag does not", async () => {
+			const alice = makeContact("alice", "Alice");
+			const fm: any = {
+				name: "Alice Doe",
+				lists: ["Family"],
+				iCloudVCard: alice,
+			};
+			mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+				async (_file: any, f: any) => f(fm),
+			);
+			mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+				files: ["Contacts/Alice Doe.md"],
+				folders: [],
+			});
+			mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
+				frontmatter: { ...fm },
+			});
+			mockFetchContacts.mockResolvedValueOnce([
+				makeGroup("g-friends", "Friends", ["alice"]),
+				alice,
+			]);
+
+			const api = new ICloudContactsApi(
+				mockObsidianApi,
+				{
+					...MOCK_DEFAULT_SETTINGS,
+					listsProperty: true,
+					previousUpdateSettings: {
+						...MOCK_DEFAULT_SETTINGS.previousUpdateSettings!,
+						listsProperty: true,
+					},
+				},
+				mockFetchContacts,
+				mockNoticeShower,
+			);
+			await api.updateContacts();
+
+			expect(fm.lists).toEqual(["Friends"]);
+		});
+
+		test("Should remove the lists property when the contact leaves all lists", async () => {
+			const alice = makeContact("alice", "Alice");
+			const fm: any = {
+				name: "Alice Doe",
+				lists: ["Family"],
+				iCloudVCard: alice,
+			};
+			mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+				async (_file: any, f: any) => f(fm),
+			);
+			mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+				files: ["Contacts/Alice Doe.md"],
+				folders: [],
+			});
+			mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
+				frontmatter: { ...fm },
+			});
+			mockFetchContacts.mockResolvedValueOnce([alice]);
+
+			const api = new ICloudContactsApi(
+				mockObsidianApi,
+				{
+					...MOCK_DEFAULT_SETTINGS,
+					listsProperty: true,
+					previousUpdateSettings: {
+						...MOCK_DEFAULT_SETTINGS.previousUpdateSettings!,
+						listsProperty: true,
+					},
+				},
+				mockFetchContacts,
+				mockNoticeShower,
+			);
+			await api.updateContacts();
+
+			expect(fm).not.toHaveProperty("lists");
+		});
+	});
+
 	test("Should create files for all contacts if settings.groups is an empty array", async () => {
 		const groupUid = "group-uid-123";
 		const contactUidInGroup = "contact-uid-in-group";
@@ -1335,7 +1526,7 @@ describe("updateContacts", () => {
 		// No contact files should be created when the selected groups have no members
 		expect(mockObsidianApi.app.vault.create).not.toHaveBeenCalled();
 	});
-	
+
 	test("Should detect settings change when groups array content changes", async () => {
 		const groupUid1 = "group-uid-1";
 		const groupUid2 = "group-uid-2";
@@ -1489,9 +1680,7 @@ describe("updateContacts", () => {
 		expect(
 			mockObsidianApi.app.fileManager.renameFile,
 		).toHaveBeenCalledTimes(1);
-		expect(
-			mockObsidianApi.app.fileManager.renameFile,
-		).toHaveBeenCalledWith(
+		expect(mockObsidianApi.app.fileManager.renameFile).toHaveBeenCalledWith(
 			{ basename: "Contact One" },
 			"Contacts/Deleted/Contact One.md",
 		);
@@ -1622,7 +1811,11 @@ describe("downloadPhotos", () => {
 
 		await createApi(photoSettings).updateContacts();
 
-		expect(mockFetchPhoto).toHaveBeenCalledWith(photoUrl, "username", "password");
+		expect(mockFetchPhoto).toHaveBeenCalledWith(
+			photoUrl,
+			"username",
+			"password",
+		);
 		expect(mockObsidianApi.app.vault.createBinary).toHaveBeenCalledWith(
 			"Contacts/Photos/0efc819a-536a-4d77-8070-733ebf12b49c.jpg",
 			JPEG,
@@ -1639,7 +1832,10 @@ describe("downloadPhotos", () => {
 		mockFetchContacts.mockResolvedValueOnce([photoVCard]);
 		mockFetchPhoto.mockResolvedValueOnce(JPEG);
 
-		await createApi({ ...photoSettings, embedPhoto: true }).updateContacts();
+		await createApi({
+			...photoSettings,
+			embedPhoto: true,
+		}).updateContacts();
 
 		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledWith(
 			"Contacts/Test Nordmann.md",
@@ -1745,7 +1941,10 @@ describe("downloadPhotos", () => {
 	test("Should not send credentials to untrusted photo hosts", async () => {
 		const evil = {
 			...photoVCard,
-			data: photoVCard.data.replace(photoUrl, "https://evil.example.com/x"),
+			data: photoVCard.data.replace(
+				photoUrl,
+				"https://evil.example.com/x",
+			),
 		};
 		const fm: Record<string, any> = {};
 		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
@@ -1782,7 +1981,9 @@ describe("downloadPhotos", () => {
 		);
 		mockFetchContacts.mockResolvedValueOnce([photoVCard]);
 		mockFetchPhoto.mockRejectedValueOnce(
-			Object.assign(new Error("Request failed, status 404"), { status: 404 }),
+			Object.assign(new Error("Request failed, status 404"), {
+				status: 404,
+			}),
 		);
 
 		await createApi(photoSettings).updateContacts();
@@ -1794,7 +1995,8 @@ describe("downloadPhotos", () => {
 	});
 
 	test("Should reuse the existing photo when the photo url is unchanged", async () => {
-		const link = "[[Contacts/Photos/0efc819a-536a-4d77-8070-733ebf12b49c.jpg]]";
+		const link =
+			"[[Contacts/Photos/0efc819a-536a-4d77-8070-733ebf12b49c.jpg]]";
 		const fm: Record<string, any> = {
 			name: "Test Nordmann",
 			"photo file": link,

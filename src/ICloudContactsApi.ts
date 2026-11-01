@@ -172,6 +172,10 @@ export default class ICloudContactsApi {
 				this.settings.iCloudServerUrl,
 			);
 
+			const listsByContactUid = this.settings.listsProperty
+				? this.getListsByContactUid(iCloudVCards)
+				: new Map<string, string[]>();
+
 			if (this.settings.groups.length > 0) {
 				// Find all chosen group cards
 				const groupVCards = iCloudVCards.filter(
@@ -237,6 +241,7 @@ export default class ICloudContactsApi {
 					previousUpdateVCard,
 					existingContact,
 					options,
+					this.getContactLists(iCloudVCard, listsByContactUid),
 				);
 			}
 
@@ -273,6 +278,39 @@ export default class ICloudContactsApi {
 		return vCard.data.includes("X-ADDRESSBOOKSERVER-KIND:group");
 	}
 
+	private getListsByContactUid(iCloudVCards: ICloudVCard[]) {
+		const listsByContactUid = new Map<string, string[]>();
+		for (const groupVCard of iCloudVCards.filter((v) =>
+			this.isGroupCard(v),
+		)) {
+			const jCard = parseVCardToJCard(groupVCard.data);
+			const name = jCard.find((part) => part.key === "fn")?.value;
+			if (typeof name !== "string" || !name) continue;
+			const listName = name.replace(/\\/g, "");
+
+			for (const part of jCard) {
+				if (part.key !== "xAddressbookserverMember") continue;
+				const uid = (part.value as string).replace("urn:uuid:", "");
+				const lists = listsByContactUid.get(uid) ?? [];
+				if (!lists.includes(listName)) lists.push(listName);
+				listsByContactUid.set(uid, lists);
+			}
+		}
+		return listsByContactUid;
+	}
+
+	private getContactLists(
+		iCloudVCard: ICloudVCard,
+		listsByContactUid: Map<string, string[]>,
+	) {
+		if (listsByContactUid.size === 0) return [];
+		const uid = parseVCardToJCard(iCloudVCard.data).find(
+			(part) => part.key === "uid",
+		)?.value;
+		if (typeof uid !== "string") return [];
+		return [...(listsByContactUid.get(uid) ?? [])].sort();
+	}
+
 	private validateSettings() {
 		if (!this.settings.username) {
 			throw new Error("ICloud username is required in settings");
@@ -298,18 +336,21 @@ export default class ICloudContactsApi {
 		previousVCard: ICloudVCard | undefined,
 		existingContact: { frontmatter: Properties; path: string } | undefined,
 		options: { rewriteAll: boolean },
+		lists: string[],
 	) {
 		try {
 			if (existingContact) {
 				const isModified = this.isModified(
 					existingContact.frontmatter,
 					iCloudVCard,
+					lists,
 				);
 				if (isModified || options.rewriteAll) {
 					await this.updateContactFile(
 						iCloudVCard,
 						existingContact,
 						previousVCard,
+						lists,
 					);
 					this.modifiedContacts.push(iCloudVCard);
 				} else {
@@ -318,7 +359,7 @@ export default class ICloudContactsApi {
 				return;
 			}
 
-			await this.createContactFile(iCloudVCard);
+			await this.createContactFile(iCloudVCard, lists);
 			this.newContacts.push(iCloudVCard);
 		} catch (e) {
 			this.handleError("Error trying to process contact", e, iCloudVCard);
@@ -406,10 +447,21 @@ export default class ICloudContactsApi {
 	private isModified(
 		existingFrontmatter: Properties,
 		iCloudVCard: ICloudVCard,
+		lists: string[],
 	) {
+		// List membership lives on the group cards, so it can change without the contact's etag changing
+		const existingLists: unknown[] = Array.isArray(
+			existingFrontmatter.lists,
+		)
+			? existingFrontmatter.lists
+			: [];
+		const areListsChanged =
+			!!this.settings.listsProperty &&
+			(existingLists.length !== lists.length ||
+				existingLists.some((list, i) => list !== lists[i]));
 		return (
 			existingFrontmatter[iCloudVCardPropertieName].etag !==
-			iCloudVCard.etag
+				iCloudVCard.etag || areListsChanged
 		);
 	}
 
@@ -417,10 +469,12 @@ export default class ICloudContactsApi {
 		iCloudVCard: ICloudVCard,
 		existingContact: { frontmatter: Properties; path: string },
 		previousVCard: ICloudVCard | undefined,
+		lists: string[],
 	) {
 		const newFrontMatter = createFrontmatter(
 			iCloudVCard.data,
 			this.settings,
+			lists,
 		);
 		const photoLink = await this.syncPhoto(iCloudVCard, existingContact);
 
@@ -502,6 +556,13 @@ export default class ICloudContactsApi {
 						}
 					}
 				}
+				if (
+					!newFrontMatter.lists &&
+					(this.settings.listsProperty ||
+						this.settings.previousUpdateSettings?.listsProperty)
+				) {
+					delete fileFrontmatter.lists;
+				}
 				for (const [key, value] of Object.entries(newFrontMatter)) {
 					fileFrontmatter[key] = value;
 				}
@@ -521,19 +582,25 @@ export default class ICloudContactsApi {
 		);
 	}
 
-	private async createContactFile(iCloudVCard: ICloudVCard) {
+	private async createContactFile(iCloudVCard: ICloudVCard, lists: string[]) {
 		if (!iCloudVCard.data) {
 			throw new Error("iCloudVCard.data is undefined");
 		}
 
-		const frontMatter = createFrontmatter(iCloudVCard.data, this.settings);
+		const frontMatter = createFrontmatter(
+			iCloudVCard.data,
+			this.settings,
+			lists,
+		);
 		const photoLink = await this.syncPhoto(iCloudVCard);
 
 		let filePath = await this.createUniqeContactFilePath(
 			frontMatter.name as string,
 		);
 
-		let content = this.settings.isNameHeading ? `# ${frontMatter.name}` : "";
+		let content = this.settings.isNameHeading
+			? `# ${frontMatter.name}`
+			: "";
 		if (this.settings.embedPhoto && photoLink) {
 			content = updatePhotoEmbed(content, {
 				path: photoPathFromLink(photoLink),
@@ -616,7 +683,8 @@ export default class ICloudContactsApi {
 
 	private get photoFolder() {
 		const folder =
-			this.settings.photoFolder?.trim() || `${this.settings.folder}/Photos`;
+			this.settings.photoFolder?.trim() ||
+			`${this.settings.folder}/Photos`;
 		return this.normalizePath(folder.replace(/\/+$/, ""));
 	}
 
@@ -635,7 +703,10 @@ export default class ICloudContactsApi {
 			const source = getPhotoSource(iCloudVCard.data);
 			if (!source) return undefined;
 
-			const baseName = getPhotoBaseName(iCloudVCard.data, iCloudVCard.url);
+			const baseName = getPhotoBaseName(
+				iCloudVCard.data,
+				iCloudVCard.url,
+			);
 			const reusableLink = this.getReusablePhotoLink(
 				existingContact,
 				source,
@@ -649,7 +720,10 @@ export default class ICloudContactsApi {
 			} else {
 				if (
 					!this.fetchPhoto ||
-					!isTrustedPhotoUrl(source.url, this.settings.iCloudServerUrl)
+					!isTrustedPhotoUrl(
+						source.url,
+						this.settings.iCloudServerUrl,
+					)
 				) {
 					throw new Error(`Photo url is not trusted: ${source.url}`);
 				}
@@ -677,7 +751,12 @@ export default class ICloudContactsApi {
 			// iCloud can list a photo url whose image no longer exists
 			if ((e as { status?: number })?.status === 404) return undefined;
 			this.failedPhotos++;
-			console.error(pluginName, "Could not download photo", iCloudVCard.url, e);
+			console.error(
+				pluginName,
+				"Could not download photo",
+				iCloudVCard.url,
+				e,
+			);
 			return existingLink;
 		}
 	}
@@ -690,7 +769,8 @@ export default class ICloudContactsApi {
 		const link = existingContact?.frontmatter[photoFileProperty];
 		const previousData =
 			existingContact?.frontmatter[iCloudVCardPropertieName]?.data;
-		if (typeof link !== "string" || typeof previousData !== "string") return;
+		if (typeof link !== "string" || typeof previousData !== "string")
+			return;
 
 		const match = /^\[\[(.*)\]\]$/.exec(link);
 		if (!match) return;

@@ -33,6 +33,7 @@ export interface ICloudContactsSettings {
 	urlLabels: boolean;
 	relatedLabels: boolean;
 	addressLabels: boolean;
+	listsProperty?: boolean;
 	excludedKeys: string;
 	downloadPhotos?: boolean;
 	embedPhoto?: boolean;
@@ -107,7 +108,8 @@ export class SettingTab extends PluginSettingTab {
 					new SecretComponent(this.app, el)
 						.setValue(this.plugin.settings.passwordSecretName ?? "")
 						.onChange(async (value) => {
-							this.plugin.settings.passwordSecretName = value ?? "";
+							this.plugin.settings.passwordSecretName =
+								value ?? "";
 							if (value && readSecret(this.app, value)) {
 								clearPlaintextPassword(this.plugin.settings);
 							}
@@ -226,6 +228,20 @@ export class SettingTab extends PluginSettingTab {
 					}),
 			);
 		new Setting(containerEl)
+			.setName("Add iCloud lists to contacts")
+			.setDesc(
+				"Adds a 'lists' property with the names of the iCloud lists (groups) each contact belongs to. Works independently of the sync filter in the Groups section below.",
+			)
+			.addToggle((bool) =>
+				bool
+					.setValue(!!this.plugin.settings.listsProperty)
+					.onChange(async (value) => {
+						this.plugin.settings.listsProperty = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
 			.setName("Download contact photos")
 			.setDesc(
 				"Saves each contact's photo as an image file in the vault and links it in the 'photo file' property.",
@@ -275,7 +291,9 @@ export class SettingTab extends PluginSettingTab {
 			)
 			.addTextArea((text) =>
 				text
-					.setPlaceholder('```dataviewjs\ndv.view("Scripts/Contact")\n```')
+					.setPlaceholder(
+						'```dataviewjs\ndv.view("Scripts/Contact")\n```',
+					)
 					.setValue(this.plugin.settings.customContent ?? "")
 					.onChange(async (value) => {
 						this.plugin.settings.customContent = value;
@@ -286,7 +304,7 @@ export class SettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Excluded keys")
 			.setDesc(
-				"A space delimited list of all the keys that should be excluded in the properties of each contact. The data will still be pressent under the iCloudVCard propertie",
+				"A space delimited list of the vCard keys that should be excluded from the properties of each contact. The data will still be pressent under the iCloudVCard propertie",
 			)
 			.addTextArea((text) =>
 				text

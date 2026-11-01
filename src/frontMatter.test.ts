@@ -754,4 +754,39 @@ describe("createFrontmatter", () => {
 			},
 		);
 	});
+
+	describe("lists", () => {
+		test("Should add lists when given", () => {
+			expect(
+				createFrontmatterFromParsedVCard(
+					[],
+					"Full Name",
+					defaultSettings,
+					["Family", "Work"],
+				),
+			).toEqual({ name: "Full Name", lists: ["Family", "Work"] });
+		});
+
+		test("Should not add lists when empty", () => {
+			expect(
+				createFrontmatterFromParsedVCard(
+					[],
+					"Full Name",
+					defaultSettings,
+					[],
+				),
+			).toEqual({ name: "Full Name" });
+		});
+
+		test("Should not let excludedKeys remove lists", () => {
+			expect(
+				createFrontmatterFromParsedVCard(
+					[],
+					"Full Name",
+					{ ...defaultSettings, excludedKeys: "lists" },
+					["Family"],
+				),
+			).toEqual({ name: "Full Name", lists: ["Family"] });
+		});
+	});
 });

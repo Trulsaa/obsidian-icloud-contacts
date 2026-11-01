@@ -11,12 +11,14 @@ export function createFrontmatter(
 		addressLabels: boolean;
 		excludedKeys: string;
 	},
+	lists: string[] = [],
 ) {
 	const { jCard, fullName } = parseVCardToJCardAndFullName(iCloudVCardData);
 	return createFrontmatterFromParsedVCard(
 		jCard as VCards[],
 		fullName,
 		settings,
+		lists,
 	);
 }
 
@@ -38,6 +40,7 @@ export function createFrontmatterFromParsedVCard(
 		addressLabels: boolean;
 		excludedKeys: string;
 	},
+	lists: string[] = [],
 ) {
 	const labels = parsedVCards.filter(({ key }) => key === "xAbLabel");
 	const contact = parsedVCards.reduce(
@@ -109,6 +112,9 @@ export function createFrontmatterFromParsedVCard(
 		},
 		{ name: fullName },
 	);
+	if (lists.length > 0) {
+		return { ...contact, lists } as { [key: string]: string | string[] };
+	}
 	return contact as { [key: string]: string | string[] };
 }
 
