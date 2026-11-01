@@ -34,6 +34,8 @@ export interface ICloudContactsSettings {
 	relatedLabels: boolean;
 	addressLabels: boolean;
 	excludedKeys: string;
+	downloadPhotos?: boolean;
+	photoFolder?: string;
 	iCloudServerUrl: string;
 	previousUpdateSettings?: ICloudContactsSettings;
 	previousUpdateData?: ICloudVCard[];
@@ -221,6 +223,35 @@ export class SettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+		new Setting(containerEl)
+			.setName("Download contact photos")
+			.setDesc(
+				"Saves each contact's photo as an image file in the vault and links it in the 'photo file' property.",
+			)
+			.addToggle((bool) =>
+				bool
+					.setValue(!!this.plugin.settings.downloadPhotos)
+					.onChange(async (value) => {
+						this.plugin.settings.downloadPhotos = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Photos folder")
+			.setDesc(
+				"The folder where contact photos will be stored. Defaults to a 'Photos' folder inside the contacts folder.",
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder(`${this.plugin.settings.folder}/Photos`)
+					.setValue(this.plugin.settings.photoFolder ?? "")
+					.onChange(async (value) => {
+						this.plugin.settings.photoFolder = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
 		new Setting(containerEl)
 			.setName("Excluded keys")
 			.setDesc(

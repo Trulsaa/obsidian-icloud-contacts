@@ -1,6 +1,14 @@
 import { ICloudContactsSettings } from "./SettingTab";
 import { createFrontmatter } from "./frontMatter";
 import { parseVCardToJCard } from "./parser";
+import {
+	base64ToArrayBuffer,
+	detectImageExtension,
+	getPhotoBaseName,
+	getPhotoSource,
+	isSamePhotoSource,
+	isTrustedPhotoUrl,
+} from "./photo";
 
 export type ICloudVCard = {
 	url: string;
@@ -15,6 +23,7 @@ type Properties = {
 const deletedFolder = "Deleted";
 const iCloudVCardPropertieName = "iCloudVCard";
 const errorsFileName = "Errors";
+const photoFileProperty = "photo file";
 const pluginName = "iCloud Contacts";
 
 interface ListedFiles {
@@ -36,9 +45,11 @@ type Vault = {
 	};
 	append: (file: TFile, data: string) => Promise<void>;
 	create: (path: string, data: string) => Promise<TFile>;
+	createBinary: (path: string, data: ArrayBuffer) => Promise<TFile>;
 	createFolder: (path: string) => Promise<TFolder>;
 	getFileByPath: (path: string) => TFile | null;
 	getFolderByPath: (path: string) => TFolder | null;
+	modifyBinary: (file: TFile, data: ArrayBuffer) => Promise<void>;
 	process: (file: TFile, fn: (data: string) => string) => Promise<string>;
 };
 
@@ -96,6 +107,7 @@ export default class ICloudContactsApi {
 	private modifiedContacts: ICloudVCard[] = [];
 	private deletedContacts: ICloudVCard[] = [];
 	private skippedContacts: ICloudVCard[] = [];
+	private failedPhotos = 0;
 
 	constructor(
 		onlyRequiredFromObsidianApp: OnlyRequiredFromObsidianApi,
@@ -107,6 +119,11 @@ export default class ICloudContactsApi {
 		) => Promise<ICloudVCard[]>,
 		private showNotice: NoticeShower,
 		private getPassword: () => string = () => settings.password,
+		private fetchPhoto?: (
+			url: string,
+			username: string,
+			password: string,
+		) => Promise<ArrayBuffer>,
 	) {
 		this.app = onlyRequiredFromObsidianApp.app;
 		this.normalizePath = onlyRequiredFromObsidianApp.normalizePath;
@@ -129,6 +146,9 @@ export default class ICloudContactsApi {
 		try {
 			this.validateSettings();
 			await this.getCreateFolder(this.settings.folder);
+			if (this.settings.downloadPhotos) {
+				await this.getCreateFolder(this.photoFolder);
+			}
 
 			// Starte a interval that sets setMessage every 1 second
 			let nDots = 0;
@@ -241,6 +261,7 @@ export default class ICloudContactsApi {
 		this.modifiedContacts = [];
 		this.deletedContacts = [];
 		this.skippedContacts = [];
+		this.failedPhotos = 0;
 
 		return { updateData, usedSettings };
 	}
@@ -311,6 +332,8 @@ export default class ICloudContactsApi {
 		noticeText += `Modified ${modifiedCount}\n`;
 		noticeText += `Deleted ${deletedCount}\n`;
 		noticeText += `Skipped ${skippedCount}\n`;
+		if (this.failedPhotos > 0)
+			noticeText += `Photos not downloaded ${this.failedPhotos} (see console)\n`;
 		if (haveSettingsChanged)
 			noticeText += "All contacts were updated to reflect new settings";
 		if (newCount + modifiedCount + deletedCount === 0)
@@ -396,6 +419,7 @@ export default class ICloudContactsApi {
 			iCloudVCard.data,
 			this.settings,
 		);
+		const photoLink = await this.syncPhoto(iCloudVCard, existingContact);
 
 		const contactFile = this.app.vault.getFileByPath(existingContact.path);
 		if (!contactFile) {
@@ -465,6 +489,16 @@ export default class ICloudContactsApi {
 				for (const [key, value] of Object.entries(newFrontMatter)) {
 					fileFrontmatter[key] = value;
 				}
+				if (photoLink) {
+					fileFrontmatter[photoFileProperty] = photoLink;
+				} else if (
+					(this.settings.downloadPhotos ||
+						this.settings.previousUpdateSettings?.downloadPhotos) &&
+					typeof fileFrontmatter[photoFileProperty] === "string" &&
+					/^\[\[.*\]\]$/.test(fileFrontmatter[photoFileProperty])
+				) {
+					delete fileFrontmatter[photoFileProperty];
+				}
 				fileFrontmatter[iCloudVCardPropertieName] =
 					JSON.stringify(iCloudVCard);
 			},
@@ -477,6 +511,7 @@ export default class ICloudContactsApi {
 		}
 
 		const frontMatter = createFrontmatter(iCloudVCard.data, this.settings);
+		const photoLink = await this.syncPhoto(iCloudVCard);
 
 		let filePath = await this.createUniqeContactFilePath(
 			frontMatter.name as string,
@@ -490,8 +525,98 @@ export default class ICloudContactsApi {
 			for (const [key, value] of Object.entries(frontMatter)) {
 				fm[key] = value;
 			}
+			if (photoLink) fm[photoFileProperty] = photoLink;
 			fm[iCloudVCardPropertieName] = JSON.stringify(iCloudVCard);
 		});
+	}
+
+	private get photoFolder() {
+		const folder =
+			this.settings.photoFolder?.trim() || `${this.settings.folder}/Photos`;
+		return this.normalizePath(folder.replace(/\/+$/, ""));
+	}
+
+	private async syncPhoto(
+		iCloudVCard: ICloudVCard,
+		existingContact?: { frontmatter: Properties; path: string },
+	): Promise<string | undefined> {
+		if (!this.settings.downloadPhotos) return undefined;
+
+		const existingLink: string | undefined =
+			typeof existingContact?.frontmatter[photoFileProperty] === "string"
+				? existingContact.frontmatter[photoFileProperty]
+				: undefined;
+
+		try {
+			const source = getPhotoSource(iCloudVCard.data);
+			if (!source) return undefined;
+
+			const baseName = getPhotoBaseName(iCloudVCard.data, iCloudVCard.url);
+			const reusableLink = this.getReusablePhotoLink(
+				existingContact,
+				source,
+				baseName,
+			);
+			if (reusableLink) return reusableLink;
+
+			let data: ArrayBuffer;
+			if ("base64" in source) {
+				data = base64ToArrayBuffer(source.base64);
+			} else {
+				if (
+					!this.fetchPhoto ||
+					!isTrustedPhotoUrl(source.url, this.settings.iCloudServerUrl)
+				) {
+					throw new Error(`Photo url is not trusted: ${source.url}`);
+				}
+				data = await this.fetchPhoto(
+					source.url,
+					this.settings.username,
+					this.getPassword(),
+				);
+			}
+
+			const extension = detectImageExtension(data);
+			if (!extension) throw new Error("Photo data is not a known image");
+
+			const path = this.normalizePath(
+				`${this.photoFolder}/${baseName}.${extension}`,
+			);
+			const file = this.app.vault.getFileByPath(path);
+			if (file) {
+				await this.app.vault.modifyBinary(file, data);
+			} else {
+				await this.app.vault.createBinary(path, data);
+			}
+			return `[[${path}]]`;
+		} catch (e) {
+			// iCloud can list a photo url whose image no longer exists
+			if ((e as { status?: number })?.status === 404) return undefined;
+			this.failedPhotos++;
+			console.error(pluginName, "Could not download photo", iCloudVCard.url, e);
+			return existingLink;
+		}
+	}
+
+	private getReusablePhotoLink(
+		existingContact: { frontmatter: Properties; path: string } | undefined,
+		source: ReturnType<typeof getPhotoSource>,
+		baseName: string,
+	): string | undefined {
+		const link = existingContact?.frontmatter[photoFileProperty];
+		const previousData =
+			existingContact?.frontmatter[iCloudVCardPropertieName]?.data;
+		if (typeof link !== "string" || typeof previousData !== "string") return;
+
+		const match = /^\[\[(.*)\]\]$/.exec(link);
+		if (!match) return;
+		const path = match[1];
+		if (!path.startsWith(`${this.photoFolder}/${baseName}.`)) return;
+		if (!this.app.vault.getFileByPath(path)) return;
+
+		return isSamePhotoSource(source, getPhotoSource(previousData))
+			? link
+			: undefined;
 	}
 
 	private async createUniqeContactFilePath(subPath: string) {

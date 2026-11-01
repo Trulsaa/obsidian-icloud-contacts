@@ -11,7 +11,7 @@ import ICloudContactsApi, {
 	ICloudVCard,
 	OnlyRequiredFromObsidianApi,
 } from "src/ICloudContactsApi";
-import { fetchContacts } from "src/iCloudClient";
+import { fetchContacts, fetchPhoto } from "src/iCloudClient";
 import { migratePasswordToSecretStorage, resolvePassword } from "src/secrets";
 import {
 	DEFAULT_SETTINGS,
@@ -58,7 +58,11 @@ function createObsidianApiWrapper(app: App): OnlyRequiredFromObsidianApi {
 					data: string,
 					_options?: DataWriteOptions,
 				) => app.vault.create(path, data),
+				createBinary: (path: string, data: ArrayBuffer) =>
+					app.vault.createBinary(path, data),
 				createFolder: (path: string) => app.vault.createFolder(path),
+				modifyBinary: (file: TFile, data: ArrayBuffer) =>
+					app.vault.modifyBinary(file, data),
 				getFileByPath: (path: string) => app.vault.getFileByPath(path),
 				getFolderByPath: (path: string) =>
 					app.vault.getFolderByPath(path),
@@ -102,6 +106,7 @@ export default class ICloudContacts extends Plugin {
 			fetchContacts,
 			showNotice,
 			() => resolvePassword(this.app, this.settings),
+			fetchPhoto,
 		);
 
 		// This adds a simple command that can be triggered anywhere

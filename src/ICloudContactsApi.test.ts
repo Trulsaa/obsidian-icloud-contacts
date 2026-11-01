@@ -49,6 +49,10 @@ const mockObsidianApi = {
 			create: jest.fn<
 				(path: string, data: string, options?: any) => Promise<any>
 			>(),
+			createBinary:
+				jest.fn<(path: string, data: ArrayBuffer) => Promise<any>>(),
+			modifyBinary:
+				jest.fn<(file: any, data: ArrayBuffer) => Promise<void>>(),
 			createFolder: jest.fn<(path: string) => Promise<any>>(),
 			getAbstractFileByPath: jest.fn<(path: string) => any>(),
 			getFileByPath: jest.fn<(path: string) => any>(
@@ -1572,5 +1576,213 @@ describe("updateContacts", () => {
 		expect(summaryMessage).not.toContain(
 			"All contacts were updated to reflect new settings",
 		);
+	});
+});
+
+describe("downloadPhotos", () => {
+	const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0]).buffer;
+	const photoUrl = "https://gateway.icloud.com/contacts/1/ck/card/abc";
+	const photoVCard = {
+		...testVCard,
+		data: testVCard.data.replace(
+			"REV:",
+			`PHOTO;VALUE=uri:${photoUrl}\r\nREV:`,
+		),
+	};
+	const photoSettings = { ...MOCK_DEFAULT_SETTINGS, downloadPhotos: true };
+	const mockFetchPhoto =
+		jest.fn<(url: string, u: string, p: string) => Promise<ArrayBuffer>>();
+
+	beforeEach(() => {
+		jest.clearAllMocks();
+		mockObsidianApi.app.vault.getFileByPath.mockReset();
+		mockObsidianApi.app.vault.adapter.exists.mockReset();
+		mockObsidianApi.app.vault.adapter.exists.mockResolvedValue(false);
+		mockObsidianApi.app.metadataCache.getCache.mockReset();
+	});
+
+	function createApi(settings: ICloudContactsSettings) {
+		return new ICloudContactsApi(
+			mockObsidianApi,
+			settings,
+			mockFetchContacts,
+			mockNoticeShower,
+			undefined,
+			mockFetchPhoto,
+		);
+	}
+
+	test("Should save the photo and link it in a new contact", async () => {
+		const fm: Record<string, any> = {};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn(fm),
+		);
+		mockFetchContacts.mockResolvedValueOnce([photoVCard]);
+		mockFetchPhoto.mockResolvedValueOnce(JPEG);
+
+		await createApi(photoSettings).updateContacts();
+
+		expect(mockFetchPhoto).toHaveBeenCalledWith(photoUrl, "username", "password");
+		expect(mockObsidianApi.app.vault.createBinary).toHaveBeenCalledWith(
+			"Contacts/Photos/0efc819a-536a-4d77-8070-733ebf12b49c.jpg",
+			JPEG,
+		);
+		expect(fm["photo file"]).toBe(
+			"[[Contacts/Photos/0efc819a-536a-4d77-8070-733ebf12b49c.jpg]]",
+		);
+	});
+
+	test("Should not fetch photos when the setting is off", async () => {
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn({}),
+		);
+		mockFetchContacts.mockResolvedValueOnce([photoVCard]);
+
+		await createApi(MOCK_DEFAULT_SETTINGS).updateContacts();
+
+		expect(mockFetchPhoto).not.toHaveBeenCalled();
+		expect(mockObsidianApi.app.vault.createBinary).not.toHaveBeenCalled();
+	});
+
+	test("Should not send credentials to untrusted photo hosts", async () => {
+		const evil = {
+			...photoVCard,
+			data: photoVCard.data.replace(photoUrl, "https://evil.example.com/x"),
+		};
+		const fm: Record<string, any> = {};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn(fm),
+		);
+		mockFetchContacts.mockResolvedValueOnce([evil]);
+
+		await createApi(photoSettings).updateContacts();
+
+		expect(mockFetchPhoto).not.toHaveBeenCalled();
+		expect(fm["photo file"]).toBeUndefined();
+		expect(fm.name).toBe("Test Nordmann");
+	});
+
+	test("Should keep creating the contact when the photo download fails", async () => {
+		const fm: Record<string, any> = {};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn(fm),
+		);
+		mockFetchContacts.mockResolvedValueOnce([photoVCard]);
+		mockFetchPhoto.mockRejectedValueOnce(new Error("401"));
+		jest.spyOn(console, "error").mockImplementationOnce(() => {});
+
+		await createApi(photoSettings).updateContacts();
+
+		expect(fm.name).toBe("Test Nordmann");
+		expect(fm["photo file"]).toBeUndefined();
+	});
+
+	test("Should treat a 404 photo as no photo without reporting a failure", async () => {
+		const fm: Record<string, any> = {};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn(fm),
+		);
+		mockFetchContacts.mockResolvedValueOnce([photoVCard]);
+		mockFetchPhoto.mockRejectedValueOnce(
+			Object.assign(new Error("Request failed, status 404"), { status: 404 }),
+		);
+
+		await createApi(photoSettings).updateContacts();
+
+		expect(fm.name).toBe("Test Nordmann");
+		expect(fm["photo file"]).toBeUndefined();
+		const notices = mockNoticeShower.mock.calls.map(([m]) => m).join("\n");
+		expect(notices).not.toContain("Photos not downloaded");
+	});
+
+	test("Should reuse the existing photo when the photo url is unchanged", async () => {
+		const link = "[[Contacts/Photos/0efc819a-536a-4d77-8070-733ebf12b49c.jpg]]";
+		const fm: Record<string, any> = {
+			name: "Test Nordmann",
+			"photo file": link,
+			iCloudVCard: photoVCard,
+		};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn(fm),
+		);
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [],
+		});
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValue({
+			frontmatter: { ...fm },
+		});
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValue("TFile");
+		mockFetchContacts.mockResolvedValueOnce([
+			{ ...photoVCard, etag: '"newEtag"' },
+		]);
+
+		await createApi(photoSettings).updateContacts();
+
+		expect(mockFetchPhoto).not.toHaveBeenCalled();
+		expect(fm["photo file"]).toBe(link);
+	});
+
+	test("Should overwrite the photo file when the photo url has changed", async () => {
+		const path = "Contacts/Photos/0efc819a-536a-4d77-8070-733ebf12b49c.jpg";
+		const fm: Record<string, any> = {
+			name: "Test Nordmann",
+			"photo file": `[[${path}]]`,
+			iCloudVCard: photoVCard,
+		};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn(fm),
+		);
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [],
+		});
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValue({
+			frontmatter: { ...fm },
+		});
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValue("TFile");
+		mockFetchContacts.mockResolvedValueOnce([
+			{
+				...photoVCard,
+				etag: '"newEtag"',
+				data: photoVCard.data.replace(photoUrl, photoUrl + "2"),
+			},
+		]);
+		mockFetchPhoto.mockResolvedValueOnce(JPEG);
+
+		await createApi(photoSettings).updateContacts();
+
+		expect(mockFetchPhoto).toHaveBeenCalledTimes(1);
+		expect(mockObsidianApi.app.vault.modifyBinary).toHaveBeenCalledWith(
+			"TFile",
+			JPEG,
+		);
+		expect(fm["photo file"]).toBe(`[[${path}]]`);
+	});
+
+	test("Should remove the photo property when the photo is removed in iCloud", async () => {
+		const fm: Record<string, any> = {
+			name: "Test Nordmann",
+			"photo file": "[[Contacts/Photos/x.jpg]]",
+			iCloudVCard: photoVCard,
+		};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn(fm),
+		);
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [],
+		});
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValue({
+			frontmatter: { ...fm },
+		});
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValue("TFile");
+		mockFetchContacts.mockResolvedValueOnce([
+			{ ...testVCard, etag: '"newEtag"' },
+		]);
+
+		await createApi(photoSettings).updateContacts();
+
+		expect(fm["photo file"]).toBeUndefined();
 	});
 });

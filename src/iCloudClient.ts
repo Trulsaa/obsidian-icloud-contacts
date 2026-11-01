@@ -1,4 +1,5 @@
 import { requestUrl } from "obsidian";
+import { nodeGet } from "./nodeGet";
 import { buildXml, parseXml, XmlElement } from "./xml";
 
 type DAVObject = {
@@ -104,6 +105,23 @@ export async function fetchContacts(
 		headers: authHeaders,
 	});
 	return vCards;
+}
+
+export async function fetchPhoto(
+	url: string,
+	username: string,
+	password: string,
+): Promise<ArrayBuffer> {
+	const headers = {
+		authorization: `Basic ${btoa(`${username}:${password}`)}`,
+	};
+	try {
+		const response = await requestUrl({ url, method: "GET", headers });
+		return response.arrayBuffer;
+	} catch (e) {
+		if ((e as { status?: number })?.status !== 421) throw e;
+		return nodeGet(url, headers);
+	}
 }
 
 async function login(serverUrl: string, headers: { authorization: string }) {

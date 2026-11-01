@@ -19,6 +19,7 @@ This plugin provides functions to sync contacts from your iCloud account to a fo
 - Sync contacts from your iCloud to Obsidian
 - Creates a file for each contact with properties corresponding to contact details.
 - Optionally sync only contacts in selected groups.
+- Optionally download contact photos into the vault (setting "Download contact photos"). Each photo is saved in the photos folder and linked from the `photo file` property. The `photo file` property is then managed by the plugin.
 - This plugin only updates the properties, the title and the top H1 header (the name). Any further info written in the files will not be touched when updating the contact.
 - You can add your own properties to the frontmatter. The plugin will only manage the following property keys: name, organization, departement, telephone, email, url, related names, instant message, social profile, date, birthday pluss any of the kays you remove from the excluded keys setting.
 
