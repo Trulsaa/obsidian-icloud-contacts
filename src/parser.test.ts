@@ -494,6 +494,11 @@ const fullNameFromVCardTestCases = [
 		'N:;;;;\r\nFN:Bergen lufthavn\\, Flesland\r\nORG:Bergen lufthavn\\, Flesland;"',
 		"Bergen lufthavn, Flesland",
 	],
+	// Regression test for https://github.com/Trulsaa/obsidian-icloud-contacts/issues/42
+	// FN can be in a different, inconsistent order than N (e.g. "Last, First"
+	// instead of "First Last"). The name should always be built from the
+	// structured N field so the order is consistent across all contacts.
+	["N:Nordmann;Test;;;\r\nFN:Nordmann Test", "Test Nordmann"],
 ];
 
 const groupMembersTestCases = [

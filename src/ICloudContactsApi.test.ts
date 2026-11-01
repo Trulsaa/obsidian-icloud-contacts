@@ -1566,8 +1566,8 @@ describe("updateContacts", () => {
 				"BEGIN:VCARD\r\n" +
 				"VERSION:3.0\r\n" +
 				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
-				"N:Doe;ContactOne;;;\r\n" +
-				"FN:Contact One\r\n" +
+				"N:Doe;Contact One;;;\r\n" +
+				"FN:Contact One Doe\r\n" +
 				`UID:${contactUid1}\r\n` +
 				"EMAIL;type=INTERNET;type=HOME;type=pref:contactone@example.com\r\n" +
 				"TEL;type=pref:11111111\r\n" +
@@ -1581,8 +1581,8 @@ describe("updateContacts", () => {
 				"BEGIN:VCARD\r\n" +
 				"VERSION:3.0\r\n" +
 				"PRODID:-//Apple Inc.//macOS 14.2.1//EN\r\n" +
-				"N:Doe;ContactTwo;;;\r\n" +
-				"FN:Contact Two\r\n" +
+				"N:Doe;Contact Two;;;\r\n" +
+				"FN:Contact Two Doe\r\n" +
 				`UID:${contactUid2}\r\n` +
 				"EMAIL;type=INTERNET;type=HOME;type=pref:contacttwo@example.com\r\n" +
 				"TEL;type=pref:22222222\r\n" +
@@ -1620,21 +1620,21 @@ describe("updateContacts", () => {
 		// Verify that the first run created the file for Contact One
 		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledTimes(1);
 		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledWith(
-			"Contacts/Contact One.md",
-			"# Contact One",
+			"Contacts/Contact One Doe.md",
+			"# Contact One Doe",
 		);
 
 		// Prepare mocks for the second run: one existing file for Contact One
 		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
-			files: ["Contacts/Contact One.md"],
+			files: ["Contacts/Contact One Doe.md"],
 			folders: [],
 		});
 		mockObsidianApi.app.metadataCache.getCache.mockImplementation(
 			(path: string) => {
-				if (path === "Contacts/Contact One.md") {
+				if (path === "Contacts/Contact One Doe.md") {
 					return {
 						frontmatter: {
-							name: "Contact One",
+							name: "Contact One Doe",
 							iCloudVCard: JSON.stringify(contactVCard1),
 						},
 					};
@@ -1644,8 +1644,8 @@ describe("updateContacts", () => {
 		);
 		mockObsidianApi.app.vault.getFileByPath.mockImplementation(
 			(path: string) => {
-				if (path === "Contacts/Contact One.md") {
-					return { basename: "Contact One" } as any;
+				if (path === "Contacts/Contact One Doe.md") {
+					return { basename: "Contact One Doe" } as any;
 				}
 				return null;
 			},
@@ -1681,16 +1681,16 @@ describe("updateContacts", () => {
 			mockObsidianApi.app.fileManager.renameFile,
 		).toHaveBeenCalledTimes(1);
 		expect(mockObsidianApi.app.fileManager.renameFile).toHaveBeenCalledWith(
-			{ basename: "Contact One" },
-			"Contacts/Deleted/Contact One.md",
+			{ basename: "Contact One Doe" },
+			"Contacts/Deleted/Contact One Doe.md",
 		);
 
 		// And a new file for Contact Two should have been created
 		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledTimes(2);
 		expect(mockObsidianApi.app.vault.create).toHaveBeenNthCalledWith(
 			2,
-			"Contacts/Contact Two.md",
-			"# Contact Two",
+			"Contacts/Contact Two Doe.md",
+			"# Contact Two Doe",
 		);
 	});
 

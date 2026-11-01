@@ -198,11 +198,6 @@ export function getFullNameFromVCard(vcardString: string): string {
 }
 
 function getFullName(jCard: JCardCollection): string {
-	const fullName = jCard.find(({ key }) => key === "fn");
-	if (fullName && fullName.value) {
-		return (fullName.value as string).replace(/\\/g, "");
-	}
-
 	const isOrg =
 		jCard.find(({ key }) => key === "xAbShowAs")?.value === "COMPANY";
 	if (isOrg) {
@@ -211,9 +206,24 @@ function getFullName(jCard: JCardCollection): string {
 		)[0].replace(/\\/g, "");
 	}
 
+	// Build the name from the structured N field whenever possible. iCloud's
+	// FN field reflects whatever order the name happened to be in when the
+	// contact was created/imported, and does not reliably follow the "Show
+	// First Name: Following Last Name" display setting, which causes
+	// inconsistent name order across contacts. N is always structured, so
+	// using it gives a consistent order for every contact.
 	const name = jCard.find(({ key }) => key === "n");
-	if (!name) throw new Error("Unable to get full name");
-	return convertNameToFullName(name.value as string[]).replace(/\\/g, "");
+	if (name) {
+		const fullNameFromN = convertNameToFullName(name.value as string[]);
+		if (fullNameFromN) return fullNameFromN.replace(/\\/g, "");
+	}
+
+	const fullName = jCard.find(({ key }) => key === "fn");
+	if (fullName && fullName.value) {
+		return (fullName.value as string).replace(/\\/g, "");
+	}
+
+	throw new Error("Unable to get full name");
 }
 
 function convertNameToFullName([
