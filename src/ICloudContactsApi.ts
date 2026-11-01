@@ -519,7 +519,12 @@ export default class ICloudContactsApi {
 			(isPrevNameHeading || isNameHeading)
 		) {
 			await this.app.vault.process(contactFile, (data) => {
-				if (!data.endsWith(searchValue)) replaceValue += "\n";
+				// Only adding the heading needs a separating newline inserted:
+				// the heading's own line already has one when it is renamed or
+				// removed, so adding one here would leave a blank line behind.
+				if (isAddHeading && !data.endsWith(searchValue)) {
+					replaceValue += "\n";
+				}
 				return data.replace(searchValue, replaceValue);
 			});
 		}

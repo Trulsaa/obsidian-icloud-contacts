@@ -850,6 +850,80 @@ describe("updateContacts", () => {
 		replaceMock.mockRestore();
 	});
 
+	// Regression test: toggling `nameOrder` (or any other setting that changes
+	// the computed contact name) used to leave an extra blank line behind every
+	// time, because the heading-replace logic always added a newline unless the
+	// heading was the very last thing in the file.
+	test("Should not insert an extra blank line when the contact name changes but the heading itself is not being added", async () => {
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+		const mockFrontMatter = {
+			name: "Test Nordmann",
+			email: ["test@test.test"],
+			telephone: ["87654321"],
+			iCloudVCard: testVCard,
+		};
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValueOnce({
+			frontmatter: { ...mockFrontMatter },
+		});
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [""],
+		});
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValueOnce({
+			basename: "Test Nordmann",
+		});
+		const mockFileContent = "\n---\n# Test Nordmann\n\nhei du der";
+
+		let usedSearchValue: any = "";
+		let usedReplaceValue: any = "";
+		const originalReplace = String.prototype.replace;
+		const replaceMock = jest
+			.spyOn(String.prototype, "replace")
+			.mockImplementation(function (searchValue, replaceValue) {
+				if (this === mockFileContent) {
+					usedSearchValue = searchValue;
+					usedReplaceValue = replaceValue;
+				}
+				return originalReplace.apply(this, arguments as any);
+			});
+
+		let newFileContent = "";
+		mockObsidianApi.app.vault.process.mockImplementationOnce(
+			async (
+				_file: any,
+				fn: (data: string) => string,
+				_options?: any,
+			) => {
+				newFileContent = fn(mockFileContent);
+				return newFileContent;
+			},
+		);
+		if (MOCK_DEFAULT_SETTINGS.previousUpdateSettings) {
+			MOCK_DEFAULT_SETTINGS.previousUpdateSettings.isNameHeading = true;
+			MOCK_DEFAULT_SETTINGS.previousUpdateSettings.nameOrder =
+				"givenFirst";
+		}
+		MOCK_DEFAULT_SETTINGS.isNameHeading = true;
+		MOCK_DEFAULT_SETTINGS.nameOrder = "familyFirst";
+		const api = new ICloudContactsApi(
+			mockObsidianApi,
+			MOCK_DEFAULT_SETTINGS,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+
+		await api.updateContacts();
+		expect(mockObsidianApi.app.vault.process).toHaveBeenCalledTimes(1);
+		expect(usedSearchValue).toEqual("# Test Nordmann");
+		expect(usedReplaceValue).toEqual("# Nordmann Test");
+		expect(newFileContent).toEqual("\n---\n# Nordmann Test\n\nhei du der");
+
+		replaceMock.mockRestore();
+		MOCK_DEFAULT_SETTINGS.nameOrder = undefined;
+		if (MOCK_DEFAULT_SETTINGS.previousUpdateSettings)
+			MOCK_DEFAULT_SETTINGS.previousUpdateSettings.nameOrder = undefined;
+	});
+
 	test("Should only create files for the contacts that are in the settings.groups", async () => {
 		// vCard representing a group with a specific UID
 		const groupUid = "group-uid-123";
