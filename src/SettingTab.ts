@@ -1,7 +1,19 @@
-import { App, PluginSettingTab, Setting, TextComponent } from "obsidian";
+import {
+	App,
+	PluginSettingTab,
+	SecretComponent,
+	Setting,
+	TextComponent,
+} from "obsidian";
 import ICloudContacts from "../main";
 import { ICloudVCard } from "./ICloudContactsApi";
 import { parseVCardToJCard } from "./parser";
+import {
+	clearPlaintextPassword,
+	getSecretStorage,
+	readSecret,
+	resolvePassword,
+} from "./secrets";
 
 export interface ICloudContactsSettings {
 	[key: string]:
@@ -13,6 +25,7 @@ export interface ICloudContactsSettings {
 		| ICloudVCard[];
 	username: string;
 	password: string;
+	passwordSecretName?: string;
 	folder: string;
 	isNameHeading?: boolean;
 	telLabels: boolean;
@@ -30,6 +43,7 @@ export interface ICloudContactsSettings {
 export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	username: "",
 	password: "",
+	passwordSecretName: "",
 	folder: "Contacts",
 	isNameHeading: true,
 	telLabels: false,
@@ -79,35 +93,26 @@ export class SettingTab extends PluginSettingTab {
 					}),
 			);
 
-		let passwordInputEl: TextComponent;
-		const passwordSettingEl = new Setting(containerEl)
-			.setName("iCloud app specific password")
-			.setDesc(
-				"You need to generate an app-specific password for your iCloud account.",
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder("App specific password")
-					.setValue(this.plugin.settings.password)
-					.onChange(async (value) => {
-						this.plugin.settings.password = value;
-						await this.plugin.saveSettings();
-					})
-					.then((textEl) => {
-						passwordInputEl = textEl;
-					})
-					.inputEl.setAttribute("type", "password"),
-			);
-
-		passwordSettingEl.addToggle((v) =>
-			v.onChange((value) => {
-				if (value) {
-					passwordInputEl.inputEl.setAttribute("type", "clear");
-				} else {
-					passwordInputEl.inputEl.setAttribute("type", "password");
-				}
-			}),
-		);
+		if (this.canUseSecretStorage()) {
+			new Setting(containerEl)
+				.setName("iCloud app specific password")
+				.setDesc(
+					"You need to generate an app-specific password for your iCloud account. Select a secret from Obsidian's keychain or create a new one.",
+				)
+				.addComponent((el) =>
+					new SecretComponent(this.app, el)
+						.setValue(this.plugin.settings.passwordSecretName ?? "")
+						.onChange(async (value) => {
+							this.plugin.settings.passwordSecretName = value ?? "";
+							if (value && readSecret(this.app, value)) {
+								clearPlaintextPassword(this.plugin.settings);
+							}
+							await this.plugin.saveSettings();
+						}),
+				);
+		} else {
+			this.addPlaintextPasswordSetting(containerEl);
+		}
 
 		containerEl.appendChild(
 			createEl("a", {
@@ -243,7 +248,7 @@ export class SettingTab extends PluginSettingTab {
 
 		this.fetchContacts(
 			this.plugin.settings.username,
-			this.plugin.settings.password,
+			resolvePassword(this.app, this.plugin.settings),
 			this.plugin.settings.iCloudServerUrl,
 		)
 			.then((contacts) => {
@@ -315,6 +320,45 @@ export class SettingTab extends PluginSettingTab {
 							: String(error)),
 				});
 			});
+	}
+
+	private canUseSecretStorage(): boolean {
+		return (
+			typeof SecretComponent === "function" &&
+			getSecretStorage(this.app) !== null
+		);
+	}
+
+	private addPlaintextPasswordSetting(containerEl: HTMLElement): void {
+		let passwordInputEl: TextComponent;
+		const passwordSettingEl = new Setting(containerEl)
+			.setName("iCloud app specific password")
+			.setDesc(
+				"You need to generate an app-specific password for your iCloud account.",
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("App specific password")
+					.setValue(this.plugin.settings.password)
+					.onChange(async (value) => {
+						this.plugin.settings.password = value;
+						await this.plugin.saveSettings();
+					})
+					.then((textEl) => {
+						passwordInputEl = textEl;
+					})
+					.inputEl.setAttribute("type", "password"),
+			);
+
+		passwordSettingEl.addToggle((v) =>
+			v.onChange((value) => {
+				if (value) {
+					passwordInputEl.inputEl.setAttribute("type", "clear");
+				} else {
+					passwordInputEl.inputEl.setAttribute("type", "password");
+				}
+			}),
+		);
 	}
 
 	private ensureStyles(): void {

@@ -106,6 +106,7 @@ export default class ICloudContactsApi {
 			serverUrl: string,
 		) => Promise<ICloudVCard[]>,
 		private showNotice: NoticeShower,
+		private getPassword: () => string = () => settings.password,
 	) {
 		this.app = onlyRequiredFromObsidianApp.app;
 		this.normalizePath = onlyRequiredFromObsidianApp.normalizePath;
@@ -144,7 +145,7 @@ export default class ICloudContactsApi {
 
 			let iCloudVCards = await this.fetchContacts(
 				this.settings.username,
-				this.settings.password,
+				this.getPassword(),
 				this.settings.iCloudServerUrl,
 			);
 
@@ -252,9 +253,9 @@ export default class ICloudContactsApi {
 		if (!this.settings.username) {
 			throw new Error("ICloud username is required in settings");
 		}
-		if (!this.settings.password) {
+		if (!this.getPassword()) {
 			throw new Error(
-				"ICloud app specific password is required in settings",
+				"ICloud app specific password is required in settings (secrets are stored per device, so it may need to be selected again on this device)",
 			);
 		}
 		if (!this.settings.folder) {
@@ -563,7 +564,9 @@ export default class ICloudContactsApi {
 			.filter(
 				([key]) =>
 					key !== "previousUpdateSettings" &&
-					key !== "previousUpdateData",
+					key !== "previousUpdateData" &&
+					key !== "password" &&
+					key !== "passwordSecretName",
 			)
 			.every(([key, value]) => {
 				const other = b[key];

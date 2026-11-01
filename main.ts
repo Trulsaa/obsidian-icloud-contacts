@@ -12,6 +12,7 @@ import ICloudContactsApi, {
 	OnlyRequiredFromObsidianApi,
 } from "src/ICloudContactsApi";
 import { fetchContacts } from "src/iCloudClient";
+import { migratePasswordToSecretStorage, resolvePassword } from "src/secrets";
 import {
 	DEFAULT_SETTINGS,
 	ICloudContactsSettings,
@@ -91,11 +92,16 @@ export default class ICloudContacts extends Plugin {
 			await this.loadData(),
 		);
 
+		if (migratePasswordToSecretStorage(this.app, this.settings)) {
+			await this.saveSettings();
+		}
+
 		this.api = new ICloudContactsApi(
 			createObsidianApiWrapper(this.app),
 			this.settings,
 			fetchContacts,
 			showNotice,
+			() => resolvePassword(this.app, this.settings),
 		);
 
 		// This adds a simple command that can be triggered anywhere
@@ -136,6 +142,7 @@ export default class ICloudContacts extends Plugin {
 		this.settings.previousUpdateData = updateData;
 		delete usedSettings.previousUpdateData;
 		delete usedSettings.previousUpdateSettings;
+		usedSettings.password = "";
 		this.settings.previousUpdateSettings = usedSettings;
 		await this.saveSettings();
 	}
