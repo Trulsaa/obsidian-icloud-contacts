@@ -21,6 +21,7 @@ This plugin provides functions to sync contacts from your iCloud account to a fo
 - Optionally sync only contacts in selected groups.
 - Optionally download contact photos into the vault (setting "Download contact photos"). Each photo is saved in the photos folder and linked from the `photo file` property. The `photo file` property is then managed by the plugin.
 - Optionally show the photo under the title in the contact file (setting "Show photo under the title"). The plugin only manages that one `![[photo]]` line, so you can write anything below it and it will not be overwritten. If you add a size to the line (e.g. `|300`) it is kept. If you delete the line, it is not added back.
+- Optionally add your own markdown to every contact file (setting "Custom content"), for example a `dataviewjs` block that builds a contact card from the properties of the note. The content is placed below the title and photo. The plugin does not mark the added text in the file. It finds the text again by matching the previous value of the setting exactly, line for line, and only replaces or removes that text. If you edit the added text in a contact file, it is no longer found: it is then not updated or removed when you change or clear the setting, and changed content is added as a new block next to your edited text. If you delete the text from a file it is not added back unless you change the setting. Change the content in the setting, not in the files. Text you added by hand earlier is left alone, but identical text is not added twice.
 - This plugin only updates the properties, the title and the top H1 header (the name). Any further info written in the files will not be touched when updating the contact.
 - You can add your own properties to the frontmatter. The plugin will only manage the following property keys: name, organization, departement, telephone, email, url, related names, instant message, social profile, date, birthday pluss any of the kays you remove from the excluded keys setting.
 
@@ -51,6 +52,14 @@ And you can add this to you daily notes template. Given that the title of your d
 LIST
 FROM "Contacts"
 WHERE birthday.day = number(split(this.file.name, "-")[2]) AND birthday.month = number(split(this.file.name, "-")[1])
+```
+````
+
+Example of a custom content setting that shows the contact card with a script of your own:
+
+````markdown
+```dataviewjs
+dv.view("Resources/Dataview Scripts/Contact Info")
 ```
 ````
 

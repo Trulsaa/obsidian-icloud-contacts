@@ -85,7 +85,7 @@ export function photoPathFromLink(link: unknown): string | undefined {
 	return /^\[\[(.*)\]\]$/.exec(link)?.[1];
 }
 
-function escapeRegExp(value: string) {
+export function escapeRegExp(value: string) {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 

@@ -1884,3 +1884,171 @@ describe("downloadPhotos", () => {
 		expect(fm["photo file"]).toBeUndefined();
 	});
 });
+
+describe("customContent", () => {
+	const content = '```dataviewjs\ndv.view("Scripts/Contact")\n```';
+	const block = content;
+	const settings = { ...MOCK_DEFAULT_SETTINGS, customContent: content };
+	const existingFm = {
+		name: "Test Nordmann",
+		iCloudVCard: testVCard,
+	};
+
+	beforeEach(() => {
+		jest.clearAllMocks();
+		mockObsidianApi.app.vault.getFileByPath.mockReset();
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValue("TFile");
+		mockObsidianApi.app.vault.adapter.exists.mockReset();
+		mockObsidianApi.app.vault.adapter.exists.mockResolvedValue(false);
+		mockObsidianApi.app.metadataCache.getCache.mockReset();
+	});
+
+	function createApi(s: ICloudContactsSettings) {
+		return new ICloudContactsApi(
+			mockObsidianApi,
+			s,
+			mockFetchContacts,
+			mockNoticeShower,
+		);
+	}
+
+	function mockExistingFile(initial: string) {
+		let content = initial;
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn({ ...existingFm }),
+		);
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [],
+		});
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValue({
+			frontmatter: { ...existingFm },
+		});
+		mockObsidianApi.app.vault.process.mockImplementation(
+			async (_file: any, fn: (data: string) => string) => {
+				content = fn(content);
+				return content;
+			},
+		);
+		return () => content;
+	}
+
+	test("Should create the file with the content under the title", async () => {
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn({}),
+		);
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+
+		await createApi(settings).updateContacts();
+
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledWith(
+			"Contacts/Test Nordmann.md",
+			`# Test Nordmann\n\n${block}\n`,
+		);
+	});
+
+	test("Should create the file without the title when it is turned off", async () => {
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn({}),
+		);
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+
+		await createApi({ ...settings, isNameHeading: false }).updateContacts();
+
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledWith(
+			"Contacts/Test Nordmann.md",
+			`${block}\n`,
+		);
+	});
+
+	test("Should not add anything when the setting is empty", async () => {
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn({}),
+		);
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+
+		await createApi(MOCK_DEFAULT_SETTINGS).updateContacts();
+
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledWith(
+			"Contacts/Test Nordmann.md",
+			"# Test Nordmann",
+		);
+	});
+
+	test("Should add the block to an existing file without touching what is already written", async () => {
+		const own = '```dataviewjs\ndv.view("Own/Script")\n```';
+		const getContent = mockExistingFile(
+			`# Test Nordmann\n\n${own}\n\nMy own notes\n- keep me`,
+		);
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+
+		await createApi({
+			...settings,
+			previousUpdateSettings: { ...settings, customContent: undefined },
+		}).updateContacts();
+
+		expect(getContent()).toBe(
+			`# Test Nordmann\n\n${block}\n\n${own}\n\nMy own notes\n- keep me`,
+		);
+		mockObsidianApi.app.vault.process.mockReset();
+	});
+
+	test("Should update only the block when the content is changed", async () => {
+		const getContent = mockExistingFile(
+			"# Test Nordmann\n\nold\n\nMy own notes",
+		);
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+
+		await createApi({
+			...settings,
+			previousUpdateSettings: { ...settings, customContent: "old" },
+		}).updateContacts();
+
+		expect(getContent()).toBe(
+			`# Test Nordmann\n\n${block}\n\nMy own notes`,
+		);
+		mockObsidianApi.app.vault.process.mockReset();
+	});
+
+	test("Should not add the content again when the user edited or removed it", async () => {
+		const getContent = mockExistingFile("# Test Nordmann\n\nMy own notes");
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+
+		await createApi({
+			...settings,
+			previousUpdateSettings: settings,
+		}).updateContacts();
+
+		expect(getContent()).toBe("# Test Nordmann\n\nMy own notes");
+		mockObsidianApi.app.vault.process.mockReset();
+	});
+
+	test("Should remove only the block when the setting is cleared", async () => {
+		const getContent = mockExistingFile(
+			`# Test Nordmann\n\n${block}\n\nMy own notes`,
+		);
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+
+		await createApi({
+			...settings,
+			customContent: "",
+			previousUpdateSettings: settings,
+		}).updateContacts();
+
+		expect(getContent()).toBe("# Test Nordmann\n\nMy own notes");
+		mockObsidianApi.app.vault.process.mockReset();
+	});
+
+	test("Should not rewrite the file when the setting has never been used", async () => {
+		const getContent = mockExistingFile("# Test Nordmann\n\nMy own notes");
+		mockFetchContacts.mockResolvedValueOnce([testVCard]);
+
+		await createApi({
+			...MOCK_DEFAULT_SETTINGS,
+			previousUpdateSettings: undefined,
+		}).updateContacts();
+
+		expect(getContent()).toBe("# Test Nordmann\n\nMy own notes");
+		mockObsidianApi.app.vault.process.mockReset();
+	});
+});

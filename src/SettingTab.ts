@@ -37,6 +37,7 @@ export interface ICloudContactsSettings {
 	downloadPhotos?: boolean;
 	embedPhoto?: boolean;
 	photoFolder?: string;
+	customContent?: string;
 	iCloudServerUrl: string;
 	previousUpdateSettings?: ICloudContactsSettings;
 	previousUpdateData?: ICloudVCard[];
@@ -263,6 +264,21 @@ export class SettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.photoFolder ?? "")
 					.onChange(async (value) => {
 						this.plugin.settings.photoFolder = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Custom content")
+			.setDesc(
+				"Markdown added to every contact file, below the title and photo. Leave empty to disable. The plugin does not mark the added text in the file. It finds it again by matching the previous content of this setting exactly, line for line. If you edit the added text in a contact file, it will no longer be found, so it will not be updated or removed when you change or clear this setting, and changed content is added as a new block next to your edited text. If you delete the text from a file it is not added back unless you change this setting. Change the content here, not in the files. Text you already added by hand is not touched, but identical text is not added twice.",
+			)
+			.addTextArea((text) =>
+				text
+					.setPlaceholder('```dataviewjs\ndv.view("Scripts/Contact")\n```')
+					.setValue(this.plugin.settings.customContent ?? "")
+					.onChange(async (value) => {
+						this.plugin.settings.customContent = value;
 						await this.plugin.saveSettings();
 					}),
 			);

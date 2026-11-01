@@ -1,4 +1,5 @@
 import { ICloudContactsSettings } from "./SettingTab";
+import { updateCustomContent } from "./customContent";
 import { createFrontmatter } from "./frontMatter";
 import { parseVCardToJCard } from "./parser";
 import {
@@ -476,6 +477,12 @@ export default class ICloudContactsApi {
 			newFrontMatter.name as string,
 		);
 
+		await this.syncCustomContent(
+			contactFile,
+			newFrontMatter.name as string,
+			photoLink,
+		);
+
 		const previousData = previousVCard
 			? previousVCard.data
 			: existingContact.frontmatter[iCloudVCardPropertieName].data;
@@ -536,6 +543,14 @@ export default class ICloudContactsApi {
 					: undefined,
 			});
 		}
+		content = updateCustomContent(content, this.settings.customContent, {
+			heading: this.settings.isNameHeading
+				? (frontMatter.name as string)
+				: undefined,
+			photoPath: this.settings.embedPhoto
+				? photoPathFromLink(photoLink)
+				: undefined,
+		});
 		const newFile = await this.app.vault.create(
 			this.normalizePath(filePath.replace(/\\/g, "")),
 			content,
@@ -573,6 +588,28 @@ export default class ICloudContactsApi {
 				path,
 				insertIfMissing,
 				heading: this.settings.isNameHeading ? name : undefined,
+			}),
+		);
+	}
+
+	private async syncCustomContent(
+		file: TFile,
+		name: string,
+		photoLink: string | undefined,
+	) {
+		const hasContent = !!this.settings.customContent?.trim();
+		const hadContent =
+			!!this.settings.previousUpdateSettings?.customContent?.trim();
+		if (!hasContent && !hadContent) return;
+
+		await this.app.vault.process(file, (data) =>
+			updateCustomContent(data, this.settings.customContent, {
+				previousContent:
+					this.settings.previousUpdateSettings?.customContent,
+				heading: this.settings.isNameHeading ? name : undefined,
+				photoPath: this.settings.embedPhoto
+					? photoPathFromLink(photoLink)
+					: undefined,
 			}),
 		);
 	}
