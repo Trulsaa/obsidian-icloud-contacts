@@ -7,7 +7,7 @@ import {
 } from "obsidian";
 import ICloudContacts from "../main";
 import { ICloudVCard } from "./ICloudContactsApi";
-import { parseVCardToJCard } from "./parser";
+import { NameOrder, parseVCardToJCard } from "./parser";
 import {
 	clearPlaintextPassword,
 	getSecretStorage,
@@ -28,6 +28,7 @@ export interface ICloudContactsSettings {
 	passwordSecretName?: string;
 	folder: string;
 	isNameHeading?: boolean;
+	nameOrder?: NameOrder;
 	telLabels: boolean;
 	emailLabels: boolean;
 	urlLabels: boolean;
@@ -51,6 +52,7 @@ export const DEFAULT_SETTINGS: ICloudContactsSettings = {
 	passwordSecretName: "",
 	folder: "Contacts",
 	isNameHeading: true,
+	nameOrder: "givenFirst",
 	telLabels: false,
 	emailLabels: false,
 	urlLabels: false,
@@ -161,6 +163,27 @@ export class SettingTab extends PluginSettingTab {
 		containerEl.createEl("small", {
 			text: "Remember to run Update Contacts after changing any of the following to have the changes take effect.",
 		});
+
+		new Setting(containerEl)
+			.setName("Name order")
+			.setDesc(
+				"Controls the order used to build each contact's name (filename, heading and 'name' property) from the First/Last/Middle name fields. This is used instead of iCloud's display name, since iCloud does not always write that consistently.",
+			)
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("givenFirst", "First Last (e.g. Ola Nordmann)")
+					.addOption(
+						"familyFirst",
+						"Last First (e.g. Nordmann Ola)",
+					)
+					.setValue(
+						this.plugin.settings.nameOrder ?? "givenFirst",
+					)
+					.onChange(async (value) => {
+						this.plugin.settings.nameOrder = value as NameOrder;
+						await this.plugin.saveSettings();
+					}),
+			);
 
 		new Setting(containerEl)
 			.setName("Add heading with contact name to the file contents")

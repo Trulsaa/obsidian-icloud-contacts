@@ -177,14 +177,19 @@ function parseVCardLines(vcardString: string): {
 	return { version, parts };
 }
 
-export function parseVCardToJCardAndFullName(vcardString: string): {
+export type NameOrder = "givenFirst" | "familyFirst";
+
+export function parseVCardToJCardAndFullName(
+	vcardString: string,
+	nameOrder: NameOrder = "givenFirst",
+): {
 	jCard: JCardCollection;
 	fullName: string;
 } {
 	const jCard = parseVCardToJCard(vcardString);
 	return {
 		jCard,
-		fullName: getFullName(jCard),
+		fullName: getFullName(jCard, nameOrder),
 	};
 }
 
@@ -193,11 +198,30 @@ export function parseVCardToJCard(vcardString: string): JCardPart[] {
 	return [{ key: "version", meta: {}, type: "text", value: version }, ...parts];
 }
 
-export function getFullNameFromVCard(vcardString: string): string {
-	return getFullName(parseVCardToJCard(vcardString));
+export function getFullNameFromVCard(
+	vcardString: string,
+	nameOrder: NameOrder = "givenFirst",
+): string {
+	return getFullName(parseVCardToJCard(vcardString), nameOrder);
 }
 
-function getFullName(jCard: JCardCollection): string {
+// Related names (X-ABRELATEDNAMES) are free text, not structured like N, so
+// there's no given/family split to go by. Assume the common convention of
+// writing them as "Given [Middle] Family" and, for familyFirst, move the
+// last word (assumed to be the family name) to the front, matching how a
+// contact's own name is reordered from N.
+export function reorderFreeTextName(
+	name: string,
+	nameOrder: NameOrder = "givenFirst",
+): string {
+	if (nameOrder !== "familyFirst") return name;
+	const words = name.trim().split(/\s+/);
+	if (words.length < 2) return name;
+	const familyName = words.pop();
+	return [familyName, ...words].join(" ");
+}
+
+function getFullName(jCard: JCardCollection, nameOrder: NameOrder): string {
 	const isOrg =
 		jCard.find(({ key }) => key === "xAbShowAs")?.value === "COMPANY";
 	if (isOrg) {
@@ -214,7 +238,10 @@ function getFullName(jCard: JCardCollection): string {
 	// using it gives a consistent order for every contact.
 	const name = jCard.find(({ key }) => key === "n");
 	if (name) {
-		const fullNameFromN = convertNameToFullName(name.value as string[]);
+		const fullNameFromN = convertNameToFullName(
+			name.value as string[],
+			nameOrder,
+		);
 		if (fullNameFromN) return fullNameFromN.replace(/\\/g, "");
 	}
 
@@ -226,20 +253,31 @@ function getFullName(jCard: JCardCollection): string {
 	throw new Error("Unable to get full name");
 }
 
-function convertNameToFullName([
-	familyName,
-	givenName,
-	additionalMiddleNames,
-	honorificPrefixes,
-	honorificSuffixes,
-]: string[]) {
-	return [
-		honorificPrefixes,
+function convertNameToFullName(
+	[
+		familyName,
 		givenName,
 		additionalMiddleNames,
-		familyName,
+		honorificPrefixes,
 		honorificSuffixes,
-	]
-		.filter((p) => !!p)
-		.join(" ");
+	]: string[],
+	nameOrder: NameOrder,
+) {
+	const nameParts =
+		nameOrder === "familyFirst"
+			? [
+					honorificPrefixes,
+					familyName,
+					givenName,
+					additionalMiddleNames,
+					honorificSuffixes,
+				]
+			: [
+					honorificPrefixes,
+					givenName,
+					additionalMiddleNames,
+					familyName,
+					honorificSuffixes,
+				];
+	return nameParts.filter((p) => !!p).join(" ");
 }

@@ -411,6 +411,32 @@ const testCases = [
 		defaultSettings,
 	],
 	[
+		"Should reorder related names to match the familyFirst name order",
+		[
+			{
+				key: "xAbrelatednames",
+				meta: { group: "item13", type: "pref" },
+				type: "text",
+				value: "Test Nordmann",
+			},
+			{
+				key: "xAbLabel",
+				meta: { group: "item13" },
+				type: "text",
+				value: "_$!<Mother>!$_",
+			},
+		],
+		{
+			"related names": ["[[Nordmann Test|Mother: Nordmann Test]]"],
+			name: "Full Name",
+		},
+		{
+			...defaultSettings,
+			relatedLabels: true,
+			nameOrder: "familyFirst",
+		},
+	],
+	[
 		"Should parse Instant Message",
 		[
 			{
@@ -742,6 +768,7 @@ describe("createFrontmatter", () => {
 					relatedLabels: boolean;
 					addressLabels: boolean;
 					excludedKeys: string;
+					nameOrder?: "givenFirst" | "familyFirst";
 				},
 			) => {
 				expect(

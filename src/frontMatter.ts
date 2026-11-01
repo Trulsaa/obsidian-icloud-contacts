@@ -1,5 +1,9 @@
 import { VCards } from "./VCards";
-import { parseVCardToJCardAndFullName } from "./parser";
+import {
+	NameOrder,
+	parseVCardToJCardAndFullName,
+	reorderFreeTextName,
+} from "./parser";
 
 export function createFrontmatter(
 	iCloudVCardData: string,
@@ -10,10 +14,14 @@ export function createFrontmatter(
 		relatedLabels: boolean;
 		addressLabels: boolean;
 		excludedKeys: string;
+		nameOrder?: NameOrder;
 	},
 	lists: string[] = [],
 ) {
-	const { jCard, fullName } = parseVCardToJCardAndFullName(iCloudVCardData);
+	const { jCard, fullName } = parseVCardToJCardAndFullName(
+		iCloudVCardData,
+		settings.nameOrder,
+	);
 	return createFrontmatterFromParsedVCard(
 		jCard as VCards[],
 		fullName,
@@ -32,6 +40,7 @@ export function createFrontmatterFromParsedVCard(
 		relatedLabels,
 		addressLabels,
 		excludedKeys,
+		nameOrder,
 	}: {
 		telLabels: boolean;
 		emailLabels: boolean;
@@ -39,6 +48,7 @@ export function createFrontmatterFromParsedVCard(
 		relatedLabels: boolean;
 		addressLabels: boolean;
 		excludedKeys: string;
+		nameOrder?: NameOrder;
 	},
 	lists: string[] = [],
 ) {
@@ -79,7 +89,7 @@ export function createFrontmatterFromParsedVCard(
 				return addValueToArray(
 					"related names",
 					wrapInBrackets(
-						value,
+						reorderFreeTextName(value, nameOrder),
 						relatedLabels && label ? label : undefined,
 					),
 					o,

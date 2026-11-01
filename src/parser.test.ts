@@ -1,5 +1,10 @@
 import { describe, expect, test } from "@jest/globals";
-import { getFullNameFromVCard, parseVCardToJCard } from "./parser";
+import {
+	getFullNameFromVCard,
+	NameOrder,
+	parseVCardToJCard,
+	reorderFreeTextName,
+} from "./parser";
 import { VCards } from "./VCards";
 
 function padVCard(vCardString: string) {
@@ -548,6 +553,53 @@ describe("parser", () => {
 			"Should get fullname from %s",
 			(vCardString: string, expected: string) => {
 				expect(getFullNameFromVCard(padVCard(vCardString))).toEqual(
+					expected,
+				);
+			},
+		);
+	});
+
+	describe("getFullNameFromVCard with nameOrder", () => {
+		const nameOrderTestCases: [string, NameOrder, string][] = [
+			["N:Nordmann;Test;;;\r\nFN:Nordmann Test", "givenFirst", "Test Nordmann"],
+			["N:Nordmann;Test;;;\r\nFN:Test Nordmann", "familyFirst", "Nordmann Test"],
+			[
+				"N:Nordmann;Test;middlename;prefix;suffix",
+				"familyFirst",
+				"prefix Nordmann Test middlename suffix",
+			],
+		];
+		test.each(nameOrderTestCases)(
+			"Should get fullname from %s with nameOrder %s",
+			(vCardString: string, nameOrder: NameOrder, expected: string) => {
+				expect(
+					getFullNameFromVCard(padVCard(vCardString), nameOrder),
+				).toEqual(expected);
+			},
+		);
+	});
+
+	describe("reorderFreeTextName", () => {
+		const reorderTestCases: [string, NameOrder | undefined, string][] = [
+			["Test Nordmann", "givenFirst", "Test Nordmann"],
+			["Test Nordmann", undefined, "Test Nordmann"],
+			["Test Nordmann", "familyFirst", "Nordmann Test"],
+			[
+				"Svend Helge Aagaard",
+				"familyFirst",
+				"Aagaard Svend Helge",
+			],
+			["Nordmann", "familyFirst", "Nordmann"],
+			["", "familyFirst", ""],
+		];
+		test.each(reorderTestCases)(
+			"Should reorder %s with nameOrder %s to %s",
+			(
+				name: string,
+				nameOrder: NameOrder | undefined,
+				expected: string,
+			) => {
+				expect(reorderFreeTextName(name, nameOrder)).toEqual(
 					expected,
 				);
 			},
