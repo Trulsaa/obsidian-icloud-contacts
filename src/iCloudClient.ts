@@ -1,6 +1,5 @@
 import { requestUrl } from "obsidian";
-import * as convert from "xml-js";
-import { ElementCompact } from "xml-js";
+import { buildXml, parseXml, XmlElement } from "./xml";
 
 type DAVObject = {
 	data: string;
@@ -55,9 +54,9 @@ type DAVCollection = {
 		  }) => Promise<DAVVCard[]>);
 	objectMultiGet?: (params: {
 		url: string;
-		props: convert.ElementCompact;
+		props: XmlElement;
 		objectUrls: string[];
-		filters?: convert.ElementCompact;
+		filters?: XmlElement;
 		timezone?: string;
 		depth: DAVDepth;
 		headers?: Record<string, string>;
@@ -184,7 +183,7 @@ const fetchVCards = async (params: {
 
 async function addressBookMultiGet(params: {
 	url: string;
-	props: ElementCompact;
+	props: XmlElement;
 	objectUrls: string[];
 	depth: DAVDepth;
 	headers?: Record<string, string>;
@@ -210,8 +209,8 @@ async function addressBookMultiGet(params: {
 
 async function addressBookQuery(params: {
 	url: string;
-	props: ElementCompact;
-	filters?: ElementCompact;
+	props: XmlElement;
+	filters?: XmlElement;
 	depth?: DAVDepth;
 	headers?: Record<string, string>;
 }): Promise<DAVResponse[]> {
@@ -442,29 +441,8 @@ function getDAVAttribute(nsArr: any) {
 
 async function davRequest(params: any): Promise<DAVResponse[]> {
 	const { url, init, convertIncoming = true, parseOutgoing = true } = params;
-	const { headers = {}, body, namespace, method, attributes } = init;
-	const xmlBody = convertIncoming
-		? convert.js2xml(
-				{
-					_declaration: {
-						_attributes: { version: "1.0", encoding: "utf-8" },
-					},
-					...body,
-					_attributes: attributes,
-				},
-				{
-					compact: true,
-					spaces: 2,
-					elementNameFn: (name) => {
-						// add namespace to all keys without namespace
-						if (namespace && !/^.+:.+/.test(name)) {
-							return `${namespace}:${name}`;
-						}
-						return name;
-					},
-				},
-			)
-		: body;
+	const { headers = {}, body, namespace, method } = init;
+	const xmlBody = convertIncoming ? buildXml(body, namespace) : body;
 
 	const davResponse = await requestUrl({
 		url,
@@ -478,40 +456,7 @@ async function davRequest(params: any): Promise<DAVResponse[]> {
 
 	const resText = davResponse.text;
 
-	const result: any = convert.xml2js(resText, {
-		compact: true,
-		trim: true,
-		textFn: (value: any, parentElement: any) => {
-			try {
-				// This is needed for xml-js design reasons
-				// eslint-disable-next-line no-underscore-dangle
-				const parentOfParent = parentElement._parent;
-				const pOpKeys = Object.keys(parentOfParent);
-				const keyNo = pOpKeys.length;
-				const keyName = pOpKeys[keyNo - 1];
-				const arrOfKey = parentOfParent[keyName];
-				const arrOfKeyLen = arrOfKey.length;
-				if (arrOfKeyLen > 0) {
-					const arr = arrOfKey;
-					const arrIndex = arrOfKey.length - 1;
-					arr[arrIndex] = nativeType(value);
-				} else {
-					parentOfParent[keyName] = nativeType(value);
-				}
-			} catch (e) {
-				console.error(e);
-			}
-		},
-		// remove namespace & camelCase
-		elementNameFn: (attributeName) =>
-			camelCase(attributeName.replace(/^.+:/, "")),
-		attributesFn: (value: any) => {
-			const newVal = { ...value };
-			delete newVal.xmlns;
-			return newVal;
-		},
-		ignoreDeclaration: true,
-	});
+	const result: any = parseXml(resText);
 
 	const responseBodies = Array.isArray(result.multistatus.response)
 		? result.multistatus.response
@@ -550,25 +495,6 @@ async function davRequest(params: any): Promise<DAVResponse[]> {
 			}, {}),
 		};
 	});
-}
-
-function nativeType(value: any) {
-	const nValue = Number(value);
-	if (!Number.isNaN(nValue)) {
-		return nValue;
-	}
-	const bValue = value.toLowerCase();
-	if (bValue === "true") {
-		return true;
-	}
-	if (bValue === "false") {
-		return false;
-	}
-	return value;
-}
-
-function camelCase(str: string) {
-	return str.replace(/([-_]\w)/g, (g) => g[1].toUpperCase());
 }
 
 function urlContains(urlA: string, urlB: string) {
