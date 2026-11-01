@@ -1632,6 +1632,104 @@ describe("downloadPhotos", () => {
 		);
 	});
 
+	test("Should create the file with the photo embedded under the title", async () => {
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn({}),
+		);
+		mockFetchContacts.mockResolvedValueOnce([photoVCard]);
+		mockFetchPhoto.mockResolvedValueOnce(JPEG);
+
+		await createApi({ ...photoSettings, embedPhoto: true }).updateContacts();
+
+		expect(mockObsidianApi.app.vault.create).toHaveBeenCalledWith(
+			"Contacts/Test Nordmann.md",
+			"# Test Nordmann\n\n![[Contacts/Photos/0efc819a-536a-4d77-8070-733ebf12b49c.jpg]]\n",
+		);
+	});
+
+	test("Should keep text written under the photo when updating", async () => {
+		const path = "Contacts/Photos/0efc819a-536a-4d77-8070-733ebf12b49c.jpg";
+		const fm: Record<string, any> = {
+			name: "Test Nordmann",
+			"photo file": `[[${path}]]`,
+			iCloudVCard: photoVCard,
+		};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn(fm),
+		);
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [],
+		});
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValue({
+			frontmatter: { ...fm },
+		});
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValue("TFile");
+		mockFetchContacts.mockResolvedValueOnce([
+			{
+				...photoVCard,
+				etag: '"newEtag"',
+				data: photoVCard.data.replace(photoUrl, photoUrl + "2"),
+			},
+		]);
+		mockFetchPhoto.mockResolvedValueOnce(JPEG);
+		let content = `# Test Nordmann\n\n![[${path}]]\n\nMy own notes\n- keep me`;
+		mockObsidianApi.app.vault.process.mockImplementation(
+			async (_file: any, fn: (data: string) => string) => {
+				content = fn(content);
+				return content;
+			},
+		);
+
+		await createApi({
+			...photoSettings,
+			embedPhoto: true,
+			previousUpdateSettings: { ...photoSettings, embedPhoto: true },
+		}).updateContacts();
+
+		expect(content).toBe(
+			`# Test Nordmann\n\n![[${path}]]\n\nMy own notes\n- keep me`,
+		);
+		mockObsidianApi.app.vault.process.mockReset();
+	});
+
+	test("Should add the embed under the title when embedding is turned on", async () => {
+		const path = "Contacts/Photos/0efc819a-536a-4d77-8070-733ebf12b49c.jpg";
+		const fm: Record<string, any> = {
+			name: "Test Nordmann",
+			"photo file": `[[${path}]]`,
+			iCloudVCard: photoVCard,
+		};
+		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
+			async (_file: any, fn: any) => fn(fm),
+		);
+		mockObsidianApi.app.vault.adapter.list.mockResolvedValueOnce({
+			files: ["Contacts/Test Nordmann.md"],
+			folders: [],
+		});
+		mockObsidianApi.app.metadataCache.getCache.mockReturnValue({
+			frontmatter: { ...fm },
+		});
+		mockObsidianApi.app.vault.getFileByPath.mockReturnValue("TFile");
+		mockFetchContacts.mockResolvedValueOnce([photoVCard]);
+		let content = "# Test Nordmann\n\nMy own notes";
+		mockObsidianApi.app.vault.process.mockImplementation(
+			async (_file: any, fn: (data: string) => string) => {
+				content = fn(content);
+				return content;
+			},
+		);
+
+		await createApi({
+			...photoSettings,
+			embedPhoto: true,
+			previousUpdateSettings: { ...photoSettings, embedPhoto: false },
+		}).updateContacts();
+
+		expect(content).toBe(`# Test Nordmann\n\n![[${path}]]\n\nMy own notes`);
+		mockObsidianApi.app.vault.process.mockReset();
+	});
+
 	test("Should not fetch photos when the setting is off", async () => {
 		mockObsidianApi.app.fileManager.processFrontMatter.mockImplementationOnce(
 			async (_file: any, fn: any) => fn({}),

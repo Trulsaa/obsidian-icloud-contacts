@@ -20,6 +20,7 @@ This plugin provides functions to sync contacts from your iCloud account to a fo
 - Creates a file for each contact with properties corresponding to contact details.
 - Optionally sync only contacts in selected groups.
 - Optionally download contact photos into the vault (setting "Download contact photos"). Each photo is saved in the photos folder and linked from the `photo file` property. The `photo file` property is then managed by the plugin.
+- Optionally show the photo under the title in the contact file (setting "Show photo under the title"). The plugin only manages that one `![[photo]]` line, so you can write anything below it and it will not be overwritten. If you add a size to the line (e.g. `|300`) it is kept. If you delete the line, it is not added back.
 - This plugin only updates the properties, the title and the top H1 header (the name). Any further info written in the files will not be touched when updating the contact.
 - You can add your own properties to the frontmatter. The plugin will only manage the following property keys: name, organization, departement, telephone, email, url, related names, instant message, social profile, date, birthday pluss any of the kays you remove from the excluded keys setting.
 

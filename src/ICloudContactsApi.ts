@@ -8,6 +8,8 @@ import {
 	getPhotoSource,
 	isSamePhotoSource,
 	isTrustedPhotoUrl,
+	photoPathFromLink,
+	updatePhotoEmbed,
 } from "./photo";
 
 export type ICloudVCard = {
@@ -467,6 +469,13 @@ export default class ICloudContactsApi {
 			});
 		}
 
+		await this.syncPhotoEmbed(
+			contactFile,
+			existingContact.frontmatter[photoFileProperty],
+			photoLink,
+			newFrontMatter.name as string,
+		);
+
 		const previousData = previousVCard
 			? previousVCard.data
 			: existingContact.frontmatter[iCloudVCardPropertieName].data;
@@ -517,9 +526,19 @@ export default class ICloudContactsApi {
 			frontMatter.name as string,
 		);
 
+		let content = this.settings.isNameHeading ? `# ${frontMatter.name}` : "";
+		if (this.settings.embedPhoto && photoLink) {
+			content = updatePhotoEmbed(content, {
+				path: photoPathFromLink(photoLink),
+				insertIfMissing: true,
+				heading: this.settings.isNameHeading
+					? (frontMatter.name as string)
+					: undefined,
+			});
+		}
 		const newFile = await this.app.vault.create(
 			this.normalizePath(filePath.replace(/\\/g, "")),
-			this.settings.isNameHeading ? `# ${frontMatter.name}` : "",
+			content,
 		);
 		await this.app.fileManager.processFrontMatter(newFile, (fm) => {
 			for (const [key, value] of Object.entries(frontMatter)) {
@@ -528,6 +547,34 @@ export default class ICloudContactsApi {
 			if (photoLink) fm[photoFileProperty] = photoLink;
 			fm[iCloudVCardPropertieName] = JSON.stringify(iCloudVCard);
 		});
+	}
+
+	private async syncPhotoEmbed(
+		file: TFile,
+		existingLink: unknown,
+		photoLink: string | undefined,
+		name: string,
+	) {
+		const wasEmbedding = !!this.settings.previousUpdateSettings?.embedPhoto;
+		if (!this.settings.embedPhoto && !wasEmbedding) return;
+
+		const previousPath = photoPathFromLink(existingLink);
+		const path = this.settings.embedPhoto
+			? photoPathFromLink(photoLink)
+			: undefined;
+		if (!previousPath && !path) return;
+
+		// Re-add the embed only for a new photo or when embedding was just turned on,
+		// so a line the user deleted by hand stays deleted.
+		const insertIfMissing = !previousPath || !wasEmbedding;
+		await this.app.vault.process(file, (data) =>
+			updatePhotoEmbed(data, {
+				previousPath,
+				path,
+				insertIfMissing,
+				heading: this.settings.isNameHeading ? name : undefined,
+			}),
+		);
 	}
 
 	private get photoFolder() {

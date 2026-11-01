@@ -35,6 +35,7 @@ export interface ICloudContactsSettings {
 	addressLabels: boolean;
 	excludedKeys: string;
 	downloadPhotos?: boolean;
+	embedPhoto?: boolean;
 	photoFolder?: string;
 	iCloudServerUrl: string;
 	previousUpdateSettings?: ICloudContactsSettings;
@@ -233,6 +234,20 @@ export class SettingTab extends PluginSettingTab {
 					.setValue(!!this.plugin.settings.downloadPhotos)
 					.onChange(async (value) => {
 						this.plugin.settings.downloadPhotos = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Show photo under the title")
+			.setDesc(
+				"Embeds the downloaded photo under the title in the contact file. The plugin only manages that one embed line, so anything you write below it is kept. Requires 'Download contact photos'.",
+			)
+			.addToggle((bool) =>
+				bool
+					.setValue(!!this.plugin.settings.embedPhoto)
+					.onChange(async (value) => {
+						this.plugin.settings.embedPhoto = value;
 						await this.plugin.saveSettings();
 					}),
 			);

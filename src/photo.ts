@@ -79,3 +79,61 @@ export function getPhotoBaseName(vCardData: string, vCardUrl: string): string {
 			: (vCardUrl.split("/").pop() ?? "").replace(/\.vcf$/i, "");
 	return raw.replace(/[^\w.-]/g, "_");
 }
+
+export function photoPathFromLink(link: unknown): string | undefined {
+	if (typeof link !== "string") return undefined;
+	return /^\[\[(.*)\]\]$/.exec(link)?.[1];
+}
+
+function escapeRegExp(value: string) {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Only touches the one `![[photo]]` line the plugin owns. Everything else in the
+// file, including text the user writes under the photo, is left as it is.
+export function updatePhotoEmbed(
+	data: string,
+	options: {
+		previousPath?: string;
+		path?: string;
+		insertIfMissing: boolean;
+		heading?: string;
+	},
+): string {
+	const { previousPath, path, insertIfMissing, heading } = options;
+	const known = [previousPath, path].filter((p): p is string => !!p);
+
+	if (known.length > 0) {
+		const existing = new RegExp(
+			`^(!\\[\\[(?:${known.map(escapeRegExp).join("|")})((?:\\|[^\\]]*)?)\\]\\])[ \\t]*(\\r?\\n)?`,
+			"m",
+		);
+		const match = existing.exec(data);
+		if (match) {
+			const end = match.index + match[0].length;
+			if (!path) return data.slice(0, match.index) + data.slice(end);
+			const embed = `![[${path}${match[2]}]]${match[0].slice(match[1].length)}`;
+			return data.slice(0, match.index) + embed + data.slice(end);
+		}
+	}
+
+	if (!path || !insertIfMissing) return data;
+
+	const embed = `![[${path}]]`;
+	const frontmatter = /^---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/.exec(data);
+	const bodyStart = frontmatter ? frontmatter[0].length : 0;
+
+	if (heading) {
+		const headingLine = new RegExp(`^# ${escapeRegExp(heading)}[ \\t]*$`, "m");
+		const body = data.slice(bodyStart);
+		const match = headingLine.exec(body);
+		if (match) {
+			const at = bodyStart + match.index + match[0].length;
+			const rest = data.slice(at);
+			return `${data.slice(0, at)}\n\n${embed}${rest === "" ? "\n" : rest}`;
+		}
+	}
+
+	const rest = data.slice(bodyStart);
+	return `${data.slice(0, bodyStart)}${embed}\n${rest === "" ? "" : "\n"}${rest}`;
+}
